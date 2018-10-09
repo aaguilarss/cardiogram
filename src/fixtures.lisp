@@ -3,7 +3,7 @@
 
 (in-package :cl-user)
 (defpackage :cardio/fixtures)
-(in-package :cl-user)
+(in-package :cardio/fixtures)
 (annot:enable-annot-syntax)
 
 (macrolet ((make-fix (symbol)
@@ -18,13 +18,12 @@
                            (not #+sbcl (sb-ext:package-locked-p symbol)
                                 #-sbcl (eql (find-package :cl) symbol)))))
                (when (or s m f)
-                 `(lambda ()
-                    ,(when s `(setf (symbol-value ,symbol) ,(symbol-value symbol)))
-                    ,(when m `(setf (macro-function ,symbol) ,(macro-function symbol)))
-                    ,(when f `(setf (fdefinition ,symbol) ,(fdefinition symbol))))))))
+                 `(,(when s `(setf (symbol-value ,symbol) ,(symbol-value symbol)))
+                   ,(when m `(setf (macro-function ,symbol) ,(macro-function symbol)))
+                   ,(when f `(setf (fdefinition ,symbol) ,(fdefinition symbol))))))))
 
   (defun make-fixes (symbol-list)
-    "Returns a list of lambda forms.
+    "Returns a list of SETF forms.
     Each lambda form fixes, when applicable, the SYMBOL-VALUE,
     MACRO-FUNCTION, and FDEFINITION properties of each SYMBOL in SYMBOL-LIST"
     (alexandria:flatten
@@ -40,14 +39,12 @@
 
 
 
-;;; With-Fixtures
-
 @export
 (defmacro with-fixtures (symbols &body body)
   "Run the forms in BODY and fix the SYMBOLS"
   `(unwind-protect
      (block nil ,@body)
-     (dolist (s ,(make-fixes symbols) (funcall s)))))
+     ,@(make-fixes symbols)))
 
 
 
@@ -71,12 +68,13 @@
     (let* ((fs (remove-if-not #'f!symbol-p (remove-duplicates (alexandria:flatten body))))
            (ns (mapcar #'f!symbol->symbol fs)))
       `(unwind-protect
-         (block ,name ,@(loop with bod = body
-                              for a in ns
-                              for b in fs
-                              do (setf bod (subst a b bod))
-                              return bod))
-         (dolist (s ,(make-fixes symbols) (funcall s))))))
+         (block ,name
+                ,@(loop with bod = body
+                        for a in ns
+                        for b in fs
+                        do (setf bod (subst a b bod))
+                        return bod))
+         ,@(make-fixes ns))))
 
   @export
   (defmacro f!let (bindings &body body)
@@ -84,12 +82,13 @@
     (let* ((fs (remove-if-not #'f!symbol-p (remove-duplicates (alexandria:flatten body))))
            (ns (mapcar #'f!symbol->symbol fs)))
       `(unwind-protect
-         (let ,bindings ,@(loop with bod = body
-                                for a in ns
-                                for b in fs
-                                do (setf bod (subst a b bod))
-                                return bod))
-         (dolist (s ,(make-fixes symbols) (funcall s))))))
+         (let ,bindings
+           ,@(loop with bod = body
+                   for a in ns
+                   for b in fs
+                   do (setf bod (subst a b bod))
+                   return bod))
+         ,@(make-fixes ns))))
 
   @export
   (defmacro f!let* (bindings &body body)
@@ -97,9 +96,10 @@
     (let* ((fs (remove-if-not #'f!symbol-p (remove-duplicates (alexandria:flatten body))))
            (ns (mapcar #'f!symbol->symbol fs)))
       `(unwind-protect
-         (let* ,bindings ,@(loop with bod = body
-                                for a in ns
-                                for b in fs
-                                do (setf bod (subst a b bod))
-                                return bod))
-         (dolist (s ,(make-fixes symbols) (funcall s)))))))
+         (let* ,bindings
+           ,@(loop with bod = body
+                   for a in ns
+                   for b in fs
+                   do (setf bod (subst a b bod))
+                   return bod))
+         ,@(make-fixes ns)))))
