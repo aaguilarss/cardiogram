@@ -2,7 +2,8 @@
 ;;; (c) 2018 Abraham Aguilar <a.aguilar@ciencias.unam.mx>
 
 (in-package :cl-user)
-(defpackage :cardio/fixtures)
+(defpackage :cardio/fixtures
+  (:use :cl))
 (in-package :cardio/fixtures)
 (annot:enable-annot-syntax)
 
