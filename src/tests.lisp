@@ -3,7 +3,7 @@
 
 (in-package :cl-user)
 (defpackage :cardio/tests
-  (:use :cl :lol))
+  (:use :cl :lol :cardio/fixtures))
 (in-package :cardio/tests)
 (annot:enable-annot-syntax)
 
@@ -29,10 +29,19 @@
      :initarg :around
      :accessor around
      :initform nil)
+   (status
+     :initarg :status
+     :accessor status
+     :initform nil)
    (time-limit
      :initarg :time-limit
      :accessor time-limit
      :initform nil)))
+
+; Possible status for a test
+
+; nil (this means the test hasn't been ru
+; result (the test was run and it passed)
 
 @export
 (defmacro deftest (name options &body body)
@@ -58,11 +67,11 @@
                 (when (member k ',(getf options :after))
                   (setf (after v)
                         (adjoin ',name (after v))))) +tests+)
-    (setf (symbol-function ',name)
-          (lol:dlambda
-            (:run (&optional &key skip) (eval-test ',name skip))
-            (:info () "Info")))
-    ',name))
+     (setf (symbol-function ',name)
+           (lol:dlambda
+             (:run (&optional &key skip) (eval-test ',name skip))
+             (:info () "Info")))
+     ',name))
 
 
 (defun eval-test (test skip)
