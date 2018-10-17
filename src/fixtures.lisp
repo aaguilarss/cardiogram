@@ -3,48 +3,77 @@
 
 (in-package :cl-user)
 (defpackage :cardio/fixtures
-  (:use :cl))
+  (:use :cl :annot.core))
 (in-package :cardio/fixtures)
 (annot:enable-annot-syntax)
 
-(macrolet ((make-fix (symbol)
-             (let ((s (and (boundp symbol)
-                           (not #+:lispworks (sys:symbol-constant-p symbol)
-                                #-:lispworks (constantp symbol))))
-                   (m (and (macro-function symbol)
-                           (not #+sbcl (sb-ext:package-locked-p symbol)
-                                #-sbcl (eql (find-package :cl) symbol))))
-                   (f (and (fdefinition symbol)
-                           (not (macro-function symbol))
-                           (not #+sbcl (sb-ext:package-locked-p symbol)
-                                #-sbcl (eql (find-package :cl) symbol)))))
-               (when (or s m f)
-                 `(,(when s `(setf (symbol-value ,symbol) ,(symbol-value symbol)))
-                   ,(when m `(setf (macro-function ,symbol) ,(macro-function symbol)))
-                   ,(when f `(setf (fdefinition ,symbol) ,(fdefinition symbol))))))))
 
-  (defun make-fixes (symbol-list)
-    "Returns a list of SETF forms.
-    Each lambda form fixes, when applicable, the SYMBOL-VALUE,
-    MACRO-FUNCTION, and FDEFINITION properties of each SYMBOL in SYMBOL-LIST"
-    (alexandria:flatten
-      (dolist (s symbol-list)
-        (etypecase s
-          (symbol
-            (when (and (not (keywordp s))
-                     (symbol-package s))
-              (make-fix s)))
-          (package
-            (loop for x being the symbols of s
-                  collect (make-fix s))))))))
+(defvar +fixes+ (make-hash-table))
 
+(defun fix-bound-p (symbol)
+  (when (gethash symbol +fixes+) t))
+
+(defun fix-definition (symbol)
+  (and (fix-bound-p symbol)
+       (gethash symbol +fixes+)))
+
+(defun (setf fix-definition) (new symbol)
+  (etypecase new
+    (function (setf (gethash symbol +fixes+) new))))
+
+(defmacro defix (name args &body body)
+  `(setf (fix-definition ',name)
+         (lambda ,args
+           ,@body)))
+
+
+
+;;; Built-in fixes
+
+(defix var (s)
+  (when (and (boundp s)
+             (not #+:lispworks (sys:symbol-constant-p s)
+                  #-:lispworks (constantp s)))
+    `(setf (symbol-value ',s) ,(symbol-value s))))
+
+(defix macro-function (s)
+  (when (and (macro-function s)
+             (not #+sbcl (sb-ext:package-locked-p (symbol-package s))
+                  #-sbcl (eql (find-package :cl) (symbol-package s))))
+    `(setf (macro-function ',s) ,(macro-function s))))
+
+(defix fdefinition (s)
+  (when (and (fboundp s)
+             (not (macro-function s))
+             (not #+sbcl (sb-ext:package-locked-p (symbol-package s))
+                  #-sbcl (eql (find-package :cl) (symbol-package s))))
+    `(setf (fdefinition ',s) ,(fdefinition s))))
+
+
+
+(defun make-fixes (symbol-list)
+  (remove-if #'null
+    (loop for s in symbol-list appending
+          (typecase s
+              (symbol
+                (when (and (not (keywordp s))
+                           (symbol-package s))
+                  (loop for f being each hash-value of +fixes+
+                        collecting (funcall f s))))
+              (list
+                (when (and (not (keywordp (car s)))
+                           (symbol-package (car s)))
+                  (loop for f in (cdr s)
+                        collecting (funcall (fix-definition f) (car s)))))))))
 
 @export
+@annot:annotation (:arity 2 :alias fix)
 (defmacro with-fixtures (symbols &body body)
   "Run the forms in BODY and fix the SYMBOLS"
   `(unwind-protect
      (block nil ,@body)
      ,@(make-fixes symbols)))
+
 
 
 
