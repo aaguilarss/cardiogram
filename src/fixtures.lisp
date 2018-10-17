@@ -3,7 +3,7 @@
 
 (in-package :cl-user)
 (defpackage :cardio/fixtures
-  (:use :cl :anaphora))
+  (:use :cl :annot.core))
 (in-package :cardio/fixtures)
 (annot:enable-annot-syntax)
 
@@ -13,7 +13,6 @@
 (defun fix-bound-p (symbol)
   (when (gethash symbol +fixes+) t))
 
-
 (defun fix-definition (symbol)
   (and (fix-bound-p symbol)
        (gethash symbol +fixes+)))
@@ -22,13 +21,14 @@
   (etypecase new
     (function (setf (gethash symbol +fixes+) new))))
 
-
-
 (defmacro defix (name args &body body)
   `(setf (fix-definition ',name)
          (lambda ,args
            ,@body)))
 
+
+
+;;; Built-in fixes
 
 (defix var (s)
   (when (and (boundp s)
@@ -67,8 +67,8 @@
                         collecting (funcall (fix-definition f) (car s)))))))))
 
 
-
 @export
+@annot:annotation (:arity 2 :alias fix)
 (defmacro with-fixtures (symbols &body body)
   "Run the forms in BODY and fix the SYMBOLS"
   `(unwind-protect
@@ -76,10 +76,6 @@
      ,@(make-fixes symbols)))
 
 
-(annot:defannotation fix (symbols form)
-  (:arity 2)
-  `(with-fixtures ,symbols
-     ,form))
 
 
 ;;; Blocks with automatic fixtures
