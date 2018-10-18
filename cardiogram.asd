@@ -8,16 +8,18 @@
   :maintainer "Abraham Aguilar"
   :license "MIT"
   :version "0.1.0"
-  :homepage "https://github.com/shapesncats/cardiogram"
-  :bug-tracker "https://github.com/shapesncats/cardiogram/issues"
-  :source-control (:git "git@github.com:shapesncats/cardiogram.git")
+  :homepage "https://gitlab.com/a.aguilar/cardiogram"
   :depends-on (:alexandria
-               :trivial-types)
+               :cl-annot
+               :let-over-lambda)
   :components ((:module "src"
                 :serial t
                 :components
-                  ((:file "cardiogram"))))
-  :description "Test framework"
+                  ((:file "fixtures")
+                   (:file "valuations")
+                   (:file "tests")
+                   (:file "cardiogram"))))
+  :description "Simple test framework for Common Lisp"
   :long-description #.(uiop:read-file-string
                         (uiop:subpathname *load-pathname* "README.md"))
   :in-order-to ((test-op (test-op cardiogram-test))))
