@@ -34,11 +34,11 @@
 
 @export
 (defmacro deformat! (name args &body body)
-  "Define a format. This macro injects two variables: TEST and STREAM as
+  "Define a format. This macro injects two variables: RESULT and STREAM as
   the first and second required arguments of the formatter funcion it
   defines."
   `(setf (find-format ',name)
-         (lambda ,(append '(test stream) args)
+         (lambda ,(append '(result stream) args)
            ,@(alexandria:parse-body body :documentation t))))
 
 
@@ -46,15 +46,14 @@
 
 (deformat! simple (form expected valuation-name)
   "The simple format. Used as DEFAULT"
-  (format stream "~a - ~:[FAILED ~a was expected. Got ~a~%~;PASS~%~]"
-          valuation-name test form expected))
+  (format stream "~:[FAILED - ~a ~%Expected: ~a ~%Got: ~a~% ~;PASSED - ~a~%~]"
+          result valuation-name expected form))
 
 (deformat! binary ()
   "More simple format. Prints 0 if failed, 1 if passed"
   (format stream "~:[0~;1~]~%" test))
 
 ; Set simple format as default
-
 (setf +format+ 'simple)
 
 
