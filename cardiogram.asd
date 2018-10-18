@@ -15,7 +15,8 @@
   :components ((:module "src"
                 :serial t
                 :components
-                  ((:file "fixtures")
+                  ((:file "toolkit")
+                   (:file "fixtures")
                    (:file "valuations")
                    (:file "tests")
                    (:file "cardiogram"))))
