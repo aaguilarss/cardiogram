@@ -3,28 +3,20 @@
 
 (in-package :cl-user)
 (defpackage :cardio/tests
-  (:use :cl :lol))
+  (:use :cl :lol :cardio/fixtures))
 (in-package :cardio/tests)
 (annot:enable-annot-syntax)
 
-;;; Test class
 
-(opts
-  :before this ; Run the test before this
-  :after that ; Run the test after that
-  :arround this ; Run the test before and after this
-  :when (and this that) ; Run the test only if this condition is met
-  :unless (and this that) ; Run the test unless the condition is met
-  :time-limit 0.5 ; Run only for 0.5 seconds
-  :fixtures (v1 v2 v3) ; Fix these three variables
-  :on-exec nil) ; Run on execute
+(defvar +tests+ (make-hash-table))
 
+
+;;; test class
 
 (defclass test ()
   ((forms
      :initarg :forms
-     :accessor test-forms
-     :type function) ; The actual test forms
+     :accessor forms)
    (before
      :initarg :before
      :accessor before
@@ -66,11 +58,11 @@
                 (when (member k ',(getf options :after))
                   (setf (after v)
                         (adjoin ',name (after v))))) +tests+)
-    (setf (symbol-function ',name)
-          (lol:dlambda
-            (:run (&optional &key skip) (eval-test ',name skip))
-            (:info () "Info")))
-    ',name))
+     (setf (symbol-function ',name)
+           (lol:dlambda
+             (:run (&optional &key skip) (eval-test ',name skip))
+             (:info () "Info")))
+     ',name))
 
 
 (defun eval-test (test skip)
