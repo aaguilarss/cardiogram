@@ -3,7 +3,8 @@
 
 (in-package :cl-user)
 (defpackage :cardio/valuations
-  (:use :cl))
+  (:use :cl
+        :cardio/toolkit))
 (in-package :cardio/valuations)
 (annot:enable-annot-syntax)
 
@@ -78,10 +79,10 @@
 (defmacro defval (name args &body body)
   `(progn
      (setf (val-definition ',name)
-           (lambda ,args
+           (flambda ,args
              ,@(alexandria:parse-body body :documentation t)))
      (defun ,name ,args
-       (call-valuation +format+ ',name (list ,@args)))))
+       (call-valuation +format+ ',name (list ,@(mapcar (lambda (x) `(delay ,x)) args))))))
 
 
 
