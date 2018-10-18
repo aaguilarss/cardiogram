@@ -53,6 +53,9 @@
   "More simple format. Prints 0 if failed, 1 if passed"
   (format stream "~:[0~;1~]~%" test))
 
+; Set simple format as default
+
+(setf +format+ 'simple)
 
 
 ;;; Valuations
