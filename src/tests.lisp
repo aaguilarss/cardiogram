@@ -8,6 +8,7 @@
 (annot:enable-annot-syntax)
 
 
+@export
 (defvar +tests+ (make-hash-table))
 
 
@@ -65,6 +66,7 @@
      ',name))
 
 
+@export
 (defun eval-test (test skip)
   (let ((tst (gethash test +tests+)))
     (dolist (a (around tst))

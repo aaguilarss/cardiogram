@@ -11,21 +11,28 @@
 ; Basic functionality
 ;;; Formats
 
+@export
 (defparameter +formats+ (make-hash-table))
+
+@export
 (defparameter +format+ nil)
 
+@export
 (defun find-format (name)
   (gethash name +formats+))
 
+@export
 (defun (setf find-format) (new name)
   (setf (gethash name +formats+) new))
 
+@export
 (defmacro deformat (name args &body body)
   "Define a format."
   `(setf (find-format name)
          (lambda ,args
           ,@(alexandria:parse-body body :documentation t))))
 
+@export
 (defmacro deformat! (name args &body body)
   "Define a format. This macro injects two variables: TEST and STREAM as
   the first and second required arguments of the formatter funcion it
@@ -50,20 +57,22 @@
 
 ;;; Valuations
 
+@export
 (defparameter +valuations+ (make-hash-table))
 
-
+@export
 (defun val-definition (symbol)
   (gethash symbol +valuations+))
 
 (defun (setf val-definition) (new symbol)
   (setf (gethash symbol +valuations+) new))
 
+@export
 (defgeneric call-valuation (format valuation args &optional stream)
   (:documentation "Defines how of FORMAT handles the result of VALUATION")
   (:argument-precedence-order format valuation args))
 
-
+@export
 (defmacro defval (name args &body body)
   `(progn
      (setf (val-definition ',name)
@@ -76,39 +85,49 @@
 
 ;; Built-in Valuations
 
+@export
 (defval true (form)
   (when form t))
 
+@export
 (defval false (form)
   (unless form t))
 
+@export
 (defval pass (form)
   (declare (ignore form))
   t)
 
+@export
 (defval fail (form)
   (declare (ignore form))
   nil)
 
+@export
 (defval is (form expected)
   (eql expected form))
 
+@export
 (defval isnt (form expected)
   (not (eql expected form)))
 
+@export
 (defval is-values (form expected)
   (equal (multiple-value-list form)
          (multiple-value-list expected)))
 
+@export
 (defval isnt-values (form expected)
   (not
     (equal (multiple-value-list form)
            (multiple-value-list expected))))
 
+@export
 (defval eql-types (form expected)
   (eql (type-of form)
        (type-of expected)))
 
+@export
 (defval expands-1 (form expected)
   (equal (macroexpand-1 form)
          expected))

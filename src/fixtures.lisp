@@ -7,20 +7,24 @@
 (in-package :cardio/fixtures)
 (annot:enable-annot-syntax)
 
-
+@export
 (defvar +fixes+ (make-hash-table))
 
+@export
 (defun fix-bound-p (symbol)
   (when (gethash symbol +fixes+) t))
 
+@export
 (defun fix-definition (symbol)
   (and (fix-bound-p symbol)
        (gethash symbol +fixes+)))
 
+@export
 (defun (setf fix-definition) (new symbol)
   (etypecase new
     (function (setf (gethash symbol +fixes+) new))))
 
+@export
 (defmacro defix (name args &body body)
   `(setf (fix-definition ',name)
          (lambda ,args
