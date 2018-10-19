@@ -130,6 +130,15 @@
 
 
 @export
+(defmacro is-print (form expected)
+  `(funcall #'call-valuation +format+ 'is-print
+            (list (delay ,form) (delay ,expected))))
+(setf (val-definition 'is-print)
+      (lambda (x y)
+        (string= (with-output-to-string (*standard-output*) (force x))
+                 (force y))))
+
+@export
 (defmacro is-values (form expected)
   `(funcall #'call-valuation +format+ 'is-values
             (list (delay ,form) (delay ,expected))))
@@ -168,4 +177,10 @@
   (let ((result (apply (val-definition val) args))
         (ev (multiple-value-list (force (cadr args))))
         (gv (multiple-value-list (force (car args)))))
+    (call-format format result stream gv ev val)))
+
+(defmethod call-valuation ((format (eql 'simple)) (val (eql 'is-print)) args &optional (stream t))
+  (let ((result (apply (val-definition val) args))
+        (ev (force (cadr args)))
+        (gv (force (car args))))
     (call-format format result stream gv ev val)))

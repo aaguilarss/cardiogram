@@ -32,6 +32,7 @@
            :pass
            :fail
            :is
+           :is-print
            :isnt
            :is-values
            :isnt-values
