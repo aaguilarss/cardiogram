@@ -42,6 +42,9 @@
          (lambda ,(append '(result stream) args)
            ,@(alexandria:parse-body body :documentation t))))
 
+@export
+(defmacro call-format (format &rest args)
+  `(funcall (find-format format) ,@args))
 
 ;; Built-in formats
 
@@ -79,10 +82,10 @@
 (defmacro defval (name args &body body)
   `(progn
      (setf (val-definition ',name)
-           (flambda ,args
+           (lambda ,args
              ,@(alexandria:parse-body body :documentation t)))
      (defun ,name ,args
-       (call-valuation +format+ ',name (list ,@(mapcar (lambda (x) `(delay ,x)) args))))))
+       (call-valuation +format+ ',name (list ,@args)))))
 
 
 
@@ -114,16 +117,6 @@
 (defval isnt (form expected)
   (not (eql expected form)))
 
-@export
-(defval is-values (form expected)
-  (equal (multiple-value-list form)
-         (multiple-value-list expected)))
-
-@export
-(defval isnt-values (form expected)
-  (not
-    (equal (multiple-value-list form)
-           (multiple-value-list expected))))
 
 @export
 (defval eql-types (form expected)
@@ -136,7 +129,23 @@
          expected))
 
 
+@export
+(defmacro is-values (form expected)
+  `(funcall #'call-valuation +format+ 'is-values
+            (list (delay ,form) (delay ,expected))))
+(setf (val-definition 'is-values)
+      (lambda (x y)
+        (equal (multiple-value-list (force x))
+               (multiple-value-list (force y)))))
 
+@export
+(defmacro isnt-values (form expected)
+  `(funcall #'call-valuation +format+ 'isnt-values
+            (list (delay ,form) (delay ,expected))))
+(setf (val-definition 'isnt-values)
+      (lambda (x y)
+        (not (equal (multiple-value-list (force x))
+                    (multiple-value-list (force y))))))
 
 ;;; Format implementation
 
@@ -144,9 +153,19 @@
   (funcall (find-format format) (apply (val-definition val) args) stream))
 
 (defmethod call-valuation ((format (eql 'simple)) val args &optional (stream t))
-  (funcall (find-format format)
-           (apply (val-definition val) args)
-           stream
-           (car args)
-           (cadr args)
-           val))
+  (let ((result (apply (val-definition val) args))
+        (ev (cadr args))
+        (gv (car args)))
+    (call-format format result stream gv ev val)))
+
+(defmethod call-valuation ((format (eql 'simple)) (val (eql 'is-values)) args &optional (stream t))
+  (let ((result (apply (val-definition val) args))
+        (ev (multiple-value-list (force (cadr args))))
+        (gv (multiple-value-list (force (car args)))))
+    (call-format format result stream gv ev val)))
+
+(defmethod call-valuation ((format (eql 'simple)) (val (eql 'isnt-values)) args &optional (stream t))
+  (let ((result (apply (val-definition val) args))
+        (ev (multiple-value-list (force (cadr args))))
+        (gv (multiple-value-list (force (car args)))))
+    (call-format format result stream gv ev val)))
