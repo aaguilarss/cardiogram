@@ -3,7 +3,9 @@
 
 (in-package :cl-user)
 (defpackage :cardio/tests
-  (:use :cl :lol :cardio/fixtures))
+  (:use :cl :lol
+        :cardio/fixtures
+        :cardio/toolkit))
 (in-package :cardio/tests)
 (annot:enable-annot-syntax)
 
@@ -35,59 +37,64 @@
      :accessor time-limit
      :initform nil)))
 
+(defun find-test (name)
+  (gethash name +tests+))
+
+(defun (setf find-test) (new name)
+  (setf (gethash name +tests+) new))
+
+(defun test-definition (name)
+  (forms (find-test name)))
+
+(defun (setf test-definition) (new name)
+  (setf (forms (find-test name)) new))
+
+
+(defun resolve-test-combination (test before after around)
+  "Resolve test combination for TEST"
+  (maphash (lambda (k v) (when (member k before) (adjoinf test (before v))))
+           +tests+)
+  (maphash (lambda (k v) (when (member k after) (adjoinf test (after v))))
+           +tests+)
+  (maphash (lambda (k v) (when (member k around) (adjoinf test (around v))))
+           +tests+))
+
+
 @export
 (defmacro deftest (name options &body body)
   "Creates an instance of test and saves it to +TESTS+.
-  Then defines a dispatche function of name NAME"
+  Then defines a dispatch function named NAME"
   `(progn
-     (setf (gethash ',name +tests+)
-           (make-instance 'test
-             :forms (lambda () (with-fixtures ,(getf options :fix)
-                                              (when ,(or (getf options :when) t)
-                                                (f!block nil
-                                                  ,@(alexandria:parse-body body :documentation t)))))
-             :time-limit ,(getf options :time-limit)))
-     (maphash (lambda (k v)
-                (when (member k ',(getf options :around))
-                  (setf (around v)
-                        (adjoin ',name (around v))))) +tests+)
-     (maphash (lambda (k v)
-                (when (member k ',(getf options :before))
-                  (setf (before v)
-                        (adjoin ',name (before v))))) +tests+)
-     (maphash (lambda (k v)
-                (when (member k ',(getf options :after))
-                  (setf (after v)
-                        (adjoin ',name (after v))))) +tests+)
+     (setf (find-test ',name)
+           (make-instance 'test))
+     (setf (test-definition ',name)
+           (lambda ()
+             ,@(alexandria:parse-body body :documentation t)))
+     (resolve-test-combination ',name
+                               ,(@l (getf options :before))
+                               ,(@l (getf options :after))
+                               ,(@l (getf options :around)))
      (setf (symbol-function ',name)
            (lol:dlambda
-             (:run (&optional &key skip) (eval-test ',name skip))
-             (:info () "Info")))
-     ',name))
+             (:run (&optional skip) (eval-test ',name skip))))))
+
+
+
 
 
 @export
 (defun eval-test (test skip)
-  (let ((tst (gethash test +tests+)))
+  (let ((tst (find-test test)))
     (dolist (a (around tst))
-      (unless (if (listp skip) (member a skip) (eql a skip))
+      (unless (member a (@l skip))
         (eval-test a skip)))
     (dolist (a (before tst))
-      (unless (if (listp skip) (member a skip) (eql a skip))
+      (unless (member a (@l skip))
         (eval-test a skip)))
     (funcall (forms tst))
     (dolist (a (after tst))
-      (unless (if (listp skip) (member a skip) (eql a skip))
+      (unless (member a (@l skip))
         (eval-test a skip)))
-    (dolist (a (reverse (around tst)))
-      (unless (if (listp skip) (member a skip) (eql a skip))
+    (dolist (a (around tst))
+      (unless (member a (@l skip))
         (eval-test a skip)))))
-
-; (opts
-;   :before this ; Run the test before this
-;   :after that ; Run the test after that
-;   :arround this ; Run the test before and after this
-;   :when (and this that) ; Run the test only if this condition is met
-;   :time-limit 0.5 ; Run only for 0.5 seconds
-;   :fix (v1 v2 v3) ; Fix these three variables
-;   :on-exec nil) ; Run on execute

@@ -8,9 +8,26 @@
 (annot:enable-annot-syntax)
 
 @export
-(defmacro delay (expr)
-  `(lambda () ,expr))
+(defmacro delay (&body expr)
+  `(lambda () ,@expr))
 
 @export
 (defun force (thunk)
   (funcall thunk))
+
+@export
+(defun adjoinf (new place)
+  (setf place (adjoin new place)))
+
+
+@export
+(defun @l (&rest args)
+  (loop while args
+        for a in args appending
+        (if (listp a)
+          (loop for e in (pop args)
+                collecting
+                (if (eql e '~a)
+                  (pop args)
+                  e))
+          `(,(pop args)))))
