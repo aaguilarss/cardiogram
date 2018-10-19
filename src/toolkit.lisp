@@ -14,13 +14,3 @@
 @export
 (defun force (thunk)
   (funcall thunk))
-
-@export
-(defmacro flambda (args &body body)
-  "Force lambda."
-  (let ((newbody body))
-    (loop for a in args
-          do (setq newbody
-                   (subst `(force ,a) a newbody)))
-    `(lambda ,args
-       ,@newbody)))
