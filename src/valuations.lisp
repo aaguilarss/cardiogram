@@ -6,7 +6,7 @@
   (:export :pass :fail :true :false :is
            :isnt :eql-types :of-type :expands-1
            :isnt-values :is-values :prints)
-  (:export :vboundp :define-valuation :add-format
+  (:export :vboundp :define-valuation :add-format :+default-format+
            :find-valuation :valuation-applicable-formats
            :valuation-name :valuation-test-forms))
 (in-package :cardiogram/valuations)
@@ -37,6 +37,11 @@
        (symbol-function valuation)))
 
 (defun (setf find-valuation) (new valuation)
+  (cond
+    ((vboundp valuation)
+     (warn "Redefining valuation ~a in (SETF FIND-VALUATION)" valuation))
+    ((fboundp valuation)
+     (warn "Redefining ~a in (SETF FIND-VALUATION) previously fbound")))
   (setf (symbol-function valuation) new))
 
 
