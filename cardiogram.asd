@@ -12,5 +12,4 @@
                         (uiop:subpathname *load-pathname* "README.md"))
   :class :package-inferred-system
   :pathname "src"
-  :depends-on (:cl-annot
-               :cardiogram/all))
+  :depends-on (:cardiogram/all))
