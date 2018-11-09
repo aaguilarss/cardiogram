@@ -1,10 +1,9 @@
 ;;; This file is a part of cardiogram
 ;;; (c) 2018 Abraham Aguilar <a.aguilar@ciencias.unam.mx>
 
-(in-package :cl-user)
-(defpackage :cardio/fixtures
-  (:use :cl :annot.core))
-(in-package :cardio/fixtures)
+(uiop:define-package :cardiogram/fixtures
+  (:use :cl :cl-annot))
+(in-package :cardiogram/fixtures)
 (annot:enable-annot-syntax)
 
 @export

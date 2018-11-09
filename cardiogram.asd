@@ -1,7 +1,5 @@
-; Cardiogram
-; Author: Abraham Aguilar <a.aguilar@ciencias.unam.mx>
-
-(in-package :cl-user)
+;; This file is part of cardiogram
+;; (c) 2018 - Abraham Aguilar <a.aguilar@ciencias.unam.mx>
 
 (asdf:defsystem :cardiogram
   :author "Abraham Aguilar"
@@ -9,18 +7,10 @@
   :license "MIT"
   :version "0.1.0"
   :homepage "https://gitlab.com/a.aguilar/cardiogram"
-  :depends-on (:alexandria
-               :cl-annot
-               :let-over-lambda)
-  :components ((:module "src"
-                :serial t
-                :components
-                  ((:file "toolkit")
-                   (:file "fixtures")
-                   (:file "valuations")
-                   (:file "tests")
-                   (:file "cardiogram"))))
-  :description "Simple test framework for Common Lisp"
+  :description "Simple test framework"
   :long-description #.(uiop:read-file-string
                         (uiop:subpathname *load-pathname* "README.md"))
-  :in-order-to ((test-op (test-op cardiogram-test))))
+  :class :package-inferred-system
+  :pathname "src"
+  :depends-on (:cl-annot
+               :cardiogram/all))
