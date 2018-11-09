@@ -2,28 +2,26 @@
 ;;; (c) 2018 Abraham Aguilar <a.aguilar@ciencias.unam.mx>
 
 (uiop:define-package :cardiogram/fixtures
-  (:use :cl :cl-annot))
+  (:use :cl)
+  (:export :defix :with-fixtures)
+  (:export :f!let :f!labels :f!let* :f!block))
 (in-package :cardiogram/fixtures)
-(annot:enable-annot-syntax)
 
-@export
+
+
 (defvar +fixes+ (make-hash-table))
 
-@export
 (defun fix-bound-p (symbol)
   (when (gethash symbol +fixes+) t))
 
-@export
 (defun fix-definition (symbol)
   (and (fix-bound-p symbol)
        (gethash symbol +fixes+)))
 
-@export
 (defun (setf fix-definition) (new symbol)
   (etypecase new
     (function (setf (gethash symbol +fixes+) new))))
 
-@export
 (defmacro defix (name args &body body)
   `(setf (fix-definition ',name)
          (lambda ,args
@@ -69,8 +67,6 @@
                   (loop for f in (cdr s)
                         collecting (funcall (fix-definition f) (car s)))))))))
 
-@export
-@annot:annotation (:arity 2 :alias fix)
 (defmacro with-fixtures (symbols &body body)
   "Run the forms in BODY and fix the SYMBOLS"
   `(unwind-protect
@@ -94,7 +90,6 @@
                              (alexandria:symbolicate (subseq (symbol-name symbol) 2)))))
 
 
-  @export
   (defmacro f!block (name &body body)
     "Block that fixes the"
     (let* ((fs (remove-if-not #'f!symbol-p (remove-duplicates (alexandria:flatten body))))
@@ -108,7 +103,6 @@
                         return bod))
          ,@(make-fixes ns))))
 
-  @export
   (defmacro f!let (bindings &body body)
     "Block that fixes the"
     (let* ((fs (remove-if-not #'f!symbol-p (remove-duplicates (alexandria:flatten body))))
@@ -122,13 +116,25 @@
                    return bod))
          ,@(make-fixes ns))))
 
-  @export
   (defmacro f!let* (bindings &body body)
     "Block that fixes the"
     (let* ((fs (remove-if-not #'f!symbol-p (remove-duplicates (alexandria:flatten body))))
            (ns (mapcar #'f!symbol->symbol fs)))
       `(unwind-protect
          (let* ,bindings
+           ,@(loop with bod = body
+                   for a in ns
+                   for b in fs
+                   do (setf bod (subst a b bod))
+                   return bod))
+         ,@(make-fixes ns))))
+
+  (defmacro f!labels (bindings &body body)
+    "Block that fixes the"
+    (let* ((fs (remove-if-not #'f!symbol-p (remove-duplicates (alexandria:flatten body))))
+           (ns (mapcar #'f!symbol->symbol fs)))
+      `(unwind-protect
+         (labels ,bindings
            ,@(loop with bod = body
                    for a in ns
                    for b in fs
