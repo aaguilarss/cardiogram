@@ -2,11 +2,12 @@
 ;; (c) 2018 - Abraham Aguilar <a.aguilar@ciencias.unam.mx>
 
 (uiop:define-package :cardiogram/valuations
-  (:mix :closer-mop :cl))
+  (:mix :closer-mop :cl)
+  (:export))
 (in-package :cardiogram/valuations)
 
 
-(defparameter +default-format+ nil)
+(defparameter *default-format* nil)
 
 (defclass valuation ()
   ((applicable-formats
@@ -23,40 +24,40 @@
        (typep (symbol-function symbol) 'valuation)))
 
 
-(defun find-valuation (valuation)
+(defun symbol-valuation (valuation)
   (and (vboundp valuation)
        (symbol-function valuation)))
 
-(defun (setf find-valuation) (new valuation)
+(defun (setf symbol-valuation) (new valuation)
   (setf (symbol-function valuation) new))
 
 (defun add-format (valuation format-name format-lambda)
   (pushnew (cons format-name format-lambda)
-           (valuation-applicable-formats (find-valuation valuation))))
+           (valuation-applicable-formats (symbol-valuation valuation))))
 
 (defun find-format-for-valuation (valuation format)
-  (setf valuation (find-valuation valuation))
+  (setf valuation (symbol-valuation valuation))
   (setf format (assoc format (valuation-applicable-formats valuation)))
   (if format
     (cdr format)
-    (error "No applicable format found of name ~a" +default-format+)))
+    (error "No applicable format found of name ~a" *default-format*)))
 
 (defmethod initialize-instance :after ((val valuation) &key)
   (set-funcallable-instance-function val
     (lambda (&rest args)
       (apply
         (find-format-for-valuation
-          (valuation-name val) +default-format+) args))))
+          (valuation-name val) *default-format*) args))))
 
 
 
 ;; Built-in valuations
 
-(setf +default-format+ 'simple)
+(setf *default-format* 'simple)
 
 (defmacro define-simple-valuation (name args &body body)
   `(progn
-     (setf (find-valuation ',name)
+     (setf (symbol-valuation ',name)
            (make-instance 'valuation :name ',name))
      (add-format ',name 'simple
                  (lambda ,args

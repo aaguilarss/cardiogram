@@ -2,37 +2,39 @@
 ;;; (c) 2018 Abraham Aguilar <a.aguilar@ciencias.unam.mx>
 
 (uiop:define-package :cardiogram/tests
-  (:use :cl :honey :cardiogram/fixtures :closer-mop)
-  (:export :deftest :is :isnt))
+  (:mix :closer-mop :cl)
+  (:use :honey :cardiogram/valuations)
+  (:export :deftest :*test-output* :tboundp
+           :symbol-test :ensure-test))
 (in-package :cardiogram/tests)
 
 
 ;; Test class
 
-(defclass test-combination ()
-  ((before
-     :initarg :name
-     :accessor test-combination-before)
-   (after
-     :initarg :after
-     :accessor test-combination-after)
-   (around
-     :initarg :around
-     :accessor test-combination-around)))
+(defparameter *test-output* *standard-output*)
 
 (defclass test ()
   ((forms
-     :initarg :name
+     :initarg :forms
      :accessor test-forms)
-   (combination
-     :initarg :combination
-     :accessor test-combination)
+   (name
+     :initarg :name
+     :accessor test-foms)
+   (before
+     :initarg :before
+     :accessor test-before)
+   (after
+     :initarg :after
+     :accessor test-after)
+   (around
+     :initarg :around
+     :accessor test-around)
    (dependencies
      :initarg :dependencies
      :accessor test-dependencies)
-   (result
+   (results
      :initarg :result
-     :accessor test-result)
+     :accessor test-results)
    (time-limit
      :initarg :time-limit
      :accessor test-time-limit)
@@ -41,75 +43,121 @@
      :accessor test-documentation))
   (:metaclass funcallable-standard-class))
 
+(defun tboundp (symbol)
+  (and (fboundp symbol)
+       (typep (symbol-function symbol) 'test)))
 
-(defmethod initialize-intance :after ((test test) &key)
+(defun symbol-test (symbol)
+  (and (tboundp symbol)
+       (symbol-function symbol)))
+
+(defun (setf symbol-test) (new symbol)
+  (and (tboundp symbol)
+       (setf (symbol-function symbol) new)))
+
+(defun report-test (test)
+  (dolist (res (reverse (test-results test)))
+    (print (cdr res) *test-output*))
+  (format *test-output* "Test ~a ~:[PASSED~;FAILED]~%~%"
+          (test-name test) (every #'car (test-results test)))
+  (values))
+
+(defun add-result-to-test (test result)
+  (push result (symbol-test (test-results test))))
+
+
+(defun make-dependency-assessment (expr)
+  (macrolet ((convert-dependency-expr (expr)
+               (cons
+                 (cond
+                   ((member (car expr) '(:and and)) 'and)
+                   ((member (car expr) '(:or or)) 'or)
+                   (t 'and))
+                 (loop for it in (cdr expr) collecting
+                       (typecase it
+                         (atom `(test-passedp ,it))
+                         (list (convert-dependency-expr it)))))))
+    (lambda () (convert-dependency-expr expr))))
+
+
+(defun resolve-test-combination (test options)
+  (loop for it in (getf options :before) doing
+        (if (tboundp it)
+          (push test (test-before (symbol-test it)))
+          (error "No test named ~a found when resolving combination for ~a" it test)))
+  (loop for it in (getf options :around) doing
+        (if (tboundp it)
+          (push test (test-around (symbol-test it)))
+          (error "No test named ~a found when resolving combination for ~a" it test)))
+  (loop for it in (getf options :after) doing
+        (if (tboundp it)
+          (push test (test-after (symbol-test it)))
+          (error "No test named ~a found when resolving combination for test" it test))))
+
+(defmethod initialize-intance :after ((test test) &key dependencies combination)
+  (resolve-test-combination test combination)
+  (setf (test-dependencies test)
+        (make-dependency-assessment dependencies))
   (set-funcallable-instance-function test
-    (construct-test-function test)))
+    (lambda (&rest options)
+      (with-slots (documentation name dependencies forms before time-limit) test
+        (prog (time1 time2
+                (skip (getf options :skip)))
+          (unless (funcall dependencies)
+            (go :out))
+          (when (member :info options)
+            (go :info))
+          (format t "Running test ~a~%" (test-name test))
+          (dolist (sy around)
+            (or (member sy skip)
+                (funcall (symbol-function sy))))
+          (dolist (sy before)
+            (or (member sy skip)
+                (funcall (symbol-function sy))))
+          (setf time1 (get-internal-run-time))
+          (funcall forms)
+          (setf time2 (get-internal-run-time))
+          (dolist (sy after)
+            (or (member sy skip)
+                (funcall (symbol-function sy))))
+          (dolist (sy around)
+            (or (member sy skip)
+                (funcall (symbol-function sy))))
+          (let ((rntime (/ (- time2 time1)
+                           internal-time-units-per-second)))
+            (add-result-to-test name
+              (cons (if time-limit (> time-limit rntime) t)
+                    (format nil "Test took ~as to run." rntime))))
+          :info
+          (report-test test)
+          (when (member :documentation options)
+            (print documentation *test-output*))
+          :out)))))
 
-(defun construct-test-function (test)
-  (with-slots (forms combination dependencies) test
-    (dlambda
-      (:run (&rest options) (test-run-clause)))))
+(defun ensure-test (name &rest initargs)
+  (when (tboundp name)
+    (warn "Redefining ~a previously defined as ~a."
+          name (type-of (symbol-function name))))
+  (setf (symbol-function name)
+        (apply #'make-instance (cons test initargs))))
 
-(defmacro test-run-clause ()
-  `(let (around before after)
-     (process-test-combination-given-options options)
-     (funcall-tests-around-test)
-     (funcall-tests-before-test)
-     (run-this-test forms)
-     (funcall-tests-after-test)
-     (funcall-tests-around-test)
-     (positive-resultp (test-result test))))
-
-(defmacro process-test-combination-given-options (options)
-  `(setq around
-         (remove-if (lambda (x) (member x ,(getf options :skip)))
-                    (test-combination-around combination))
-         before
-         (remove-if (lambda (x) (member x ,(getf options :skip)))
-                    (test-combination-before combination))
-         after
-         (remove-if (lambda (x) (member x ,(getf options :skip)))
-                    (test-combination-after combination))))
-
-
-(defmacro funcall-tests-around-test ()
-  `(dolist (a around)
-     (funcall a)))
-
-(defmacro funcall-tests-before-test ()
-  `(dolist (a before)
-     (funcall a)))
-
-(defmacro funcall-tests-after-test ()
-  `(dolist (a after)
-     (funcall a)))
-
-(defmacro! run-this-test (body)
-  `(let (+results+ ,g!time1 ,g!time2)
-     (if (dependency-assessment dependencies)
-       (progn
-         (push-passing-dependency-result)
-         (setq ,g!time1 (get-internal-run-time))
-         ,@body
-         (setq ,g!time2 (get-internal-run-time))
-         (push-test-time-result))
-       (push-failing-dependency-result))
-     (report-results)
-     (set-test-result-using-results test +results+)))
-
-(defun dependency-assessment (list)
-  (loop for it in list collecting
+(defmacro transform-body (forms name)
+  (loop for it in forms collecting
         (typecase it
-          (symbol it)
-          (test `(= 2 ,it))
-          (list (dependency-assessment it)))))
+          (list (if (vboundp (car it))
+                  `(add-result-to-test ',name ,(transform-body it))
+                  (transform-body it)))
+          (atom it))))
 
-(defmacro push-test-time-result ()
-  `(push t +results+))
-
-(defmacro report-results ()
-  `(dolist (r +results) (print r)))
-
-(defun set-test-result-using-results (test +results+)
-  `("hello"))
+(defmacro deftest (name (&rest options) &body body)
+  (multiple-value-bind (bod decl doc) (parse-body body))
+  `(ensure-test ',name
+     :forms (lambda () ,@(transform-body bod))
+     :name ',name
+     :documentation ,doc
+     :time-limit (getf options :time-limit)
+     :dependencies (l! (getf options :depends-on))
+     :combination ,(l!
+                     :before (l! (getf options :before))
+                     :around (l! (getf options :around))
+                     :after (l! (getf options :after)))))
