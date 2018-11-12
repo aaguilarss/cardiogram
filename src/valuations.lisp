@@ -12,7 +12,7 @@
 (in-package :cardiogram/valuations)
 
 
-(defparameter +default-format+ nil)
+(defparameter *default-format* nil)
 
 (defclass valuation ()
   ((applicable-formats
@@ -32,7 +32,7 @@
        (typep (symbol-function symbol) 'valuation)))
 
 
-(defun find-valuation (valuation)
+(defun symbol-valuation (valuation)
   (and (vboundp valuation)
        (symbol-function valuation)))
 
@@ -46,11 +46,11 @@
 
 
 (defun find-format-for-valuation (valuation format)
-  (setf valuation (find-valuation valuation))
+  (setf valuation (symbol-valuation valuation))
   (setf format (assoc format (valuation-applicable-formats valuation)))
   (if format
     (cdr format)
-    (error "No applicable format found of name ~a" +default-format+)))
+    (error "No applicable format found of name ~a" *default-format*)))
 
 (defun add-format (valuation format-name format-lambda)
   (pushnew (cons format-name format-lambda)
