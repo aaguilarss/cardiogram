@@ -195,7 +195,6 @@ with an error is a failed test.
 ```
 
 
-[^1]: Or rather a test which is't bound to a symbol.
 
 ## Comparisons, valuations and formats.
 
@@ -326,4 +325,4 @@ You can define your own fixes with the `defix` macro.
 ; (defix name args &body body)
 ```
 
-Copyright (c) 2018 Abraham Aguilar (a.aguilar@ciencias.unam.mx)
+[^1]: Or rather a test which is't bound to a symbol.
