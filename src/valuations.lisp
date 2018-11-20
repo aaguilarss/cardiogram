@@ -3,11 +3,11 @@
 
 (uiop:define-package :cardiogram/valuations
   (:mix :closer-mop :cl)
-  (:use :cardiogram/tests :honey)
+  (:use :cardiogram/tests :cardiogram/toolkit)
   (:export :pass :fail :true :false :is
            :isnt :eql-types :of-type :expands-1
            :isnt-values :is-values :prints)
-  (:export :vboundp :define-valuation :add-format :+default-format+
+  (:export :vboundp :define-valuation :add-format
            :symbol-valuation :valuation-applicable-formats
            :valuation-name :valuation-test))
 (in-package :cardiogram/valuations)

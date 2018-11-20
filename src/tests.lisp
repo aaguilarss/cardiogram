@@ -3,13 +3,16 @@
 
 (uiop:define-package :cardiogram/tests
   (:mix :closer-mop :cl)
-  (:use :honey)
+  (:use :cardiogram/toolkit)
   (:export :*test* :*test-output*)
   (:export :tboundp :symbol-test :ensure-test :deftest
-           :test-results)
+           :test-results :test-dependencies :test-name
+           :test-status :test-forms :test-after :test-before
+           :test-around :test-passes-p :test-time-limit
+           :test-forms)
   (:export :deftest :*test-output* :tboundp :*test*
            :symbol-test :ensure-test)
-  (:export :*default-format* :simple))
+  (:export :*default-format* :simple :binary))
 (in-package :cardiogram/tests)
 
 
