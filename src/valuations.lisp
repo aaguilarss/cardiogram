@@ -69,8 +69,10 @@
   (push format (valuation-applicable-formats valuation)))
 
 (defun find-format-for-valuation (valuation)
-  (find-if (lambda (x) (eql (format-name x) *default-format*))
-           (valuation-applicable-formats valuation)))
+  (or (find-if (lambda (x) (eql (format-name x) *default-format*))
+               (valuation-applicable-formats valuation))
+      (find-if (lambda (x) (eql (format-name x) 'binary))
+               (valuation-applicable-formats valuation))))
 
 
 (defmethod initialize-instance :after ((val valuation) &key)
