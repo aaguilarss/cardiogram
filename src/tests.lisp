@@ -10,7 +10,7 @@
            :test-status :test-forms :test-after :test-before
            :test-around :test-passes-p :test-time-limit
            :test-forms)
-  (:export :deftest :*test-output* :tboundp :*test*
+  (:export :deftest :*test-output* :tboundp :*test* :*ignore-errors*
            :symbol-test :ensure-test)
   (:export :*default-format* :simple :binary))
 (in-package :cardiogram/tests)
@@ -20,6 +20,7 @@
 
 (defparameter *test-output* *standard-output*)
 (defparameter *default-format* 'simple)
+(defparameter *ignore-errors* nil)
 
 (defclass test ()
   ((forms
@@ -141,7 +142,21 @@
         :this
         (setf (test-results test) nil)
         (setf t1 (get-internal-run-time))
-        (funcall (test-forms test))
+        (handler-case (funcall (test-forms test))
+          (error (condition)
+            (if *ignore-errors*
+              (push (cons nil
+                          (apply #'s!
+                                 (l! (simple-condition-format-control condition)
+                                     (simple-condition-format-arguments condition))))
+                    (test-results test))
+              (progn
+                (push (cons nil
+                            (apply #'s!
+                                   (l! (simple-condition-format-control condition)
+                                       (simple-condition-format-arguments condition))))
+                      (test-results test))
+                (invoke-debugger condition)))))
         (setf t2 (get-internal-run-time))
         (format *test-output* "Test ~a took ~as to run~%~&" (test-name test)
                 (float (/ (- t1 t2) internal-time-units-per-second)))
