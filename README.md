@@ -46,7 +46,7 @@ the `:run` option like so:
 
 ```
 
-## Chaining tests
+#### Chaining tests
 
 You can combine tests using the `:before`, `:around`, and `:after` options. For example:
 
@@ -89,7 +89,7 @@ when you call it:
 ;   Running test myotherfunction-test...
 ```
 
-## Test dependencies
+#### Test dependencies
 
 To define dependencies for a test, use the `:depends-on` option.
 
@@ -135,9 +135,43 @@ Tests are funcallable, so you can programatically call tests with Lisp's own `fu
         (funcall (symbol-test sy))))
 ```
 
+Furthermore, being functions, tests will return `t` or `nil` whenever they pass or fail respectively.
+
+
+```common-lisp
+; silly example
+
+(when (myfunction-test)
+  (asdf:make :mypackage))
+
+```
+
+#### Errors
+
+A global variable called `*ignore-errors*` controls if a test invokes the debugger on error or not.
+It's set to `nil` by default. When set to `t`, errors will be ignored but sill be reported. A test
+with an error is a failed test.
+
+```common-lisp
+
+(setf *ignore-errors* t)
+
+(deftest a ()
+(+ 'a 1))
+
+(a)
+
+;=> Running test A...
+;   Test A took 0.0s to run.
+;   Test A FAIL
+;
+;   Value of 'A in (+ 'A 1) is A, not a NUMBER. 'A(+ 'A 1)NUMBER
+;   NIL
+```
+
 ## Comparisons, valuations and formats.
 
-Cardiogram provides the following valuations:
+Cardiogram provides the following valuations to be used inside a test's forms.
 
 ```
 (true form)
@@ -239,7 +273,7 @@ var2
 #### Environments with automatic fixes
 
 Also there are macros that automatically compute fixes for symbols whose `symbol-name`
-starts with `F!`. They are `f!let`, `f!let*` and `f!labels`
+starts with `F!`. They are `f!let`, `f!let*`, `f!block` and `f!labels`
 
 ```common-lisp
 *global-var*
