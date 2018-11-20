@@ -2,25 +2,25 @@
 ;;; (c) 2018 Abraham Aguilar <a.aguilar@ciencias.unam.mx>
 
 (uiop:define-package :cardiogram/fixtures
-  (:use :cl)
+  (:use :cl :honey)
   (:export :defix :with-fixtures)
   (:export :f!let :f!labels :f!let* :f!block))
 (in-package :cardiogram/fixtures)
 
 
 
-(defvar +fixes+ (make-hash-table))
+(defparameter *fixes* (make-hash-table))
 
 (defun fix-bound-p (symbol)
-  (when (gethash symbol +fixes+) t))
+  (when (gethash symbol *fixes*) t))
 
 (defun fix-definition (symbol)
   (and (fix-bound-p symbol)
-       (gethash symbol +fixes+)))
+       (gethash symbol *fixes*)))
 
 (defun (setf fix-definition) (new symbol)
   (etypecase new
-    (function (setf (gethash symbol +fixes+) new))))
+    (function (setf (gethash symbol *fixes*) new))))
 
 (defmacro defix (name args &body body)
   `(setf (fix-definition ',name)
@@ -59,7 +59,7 @@
               (symbol
                 (when (and (not (keywordp s))
                            (symbol-package s))
-                  (loop for f being each hash-value of +fixes+
+                  (loop for f being each hash-value of *fixes*
                         collecting (funcall f s))))
               (list
                 (when (and (not (keywordp (car s)))
@@ -87,12 +87,12 @@
          (f!symbol->symbol (symbol)
                            (and
                              (f!symbol-p symbol)
-                             (alexandria:symbolicate (subseq (symbol-name symbol) 2)))))
+                             (sy! (subseq (symbol-name symbol) 2)))))
 
 
   (defmacro f!block (name &body body)
     "Block that fixes the"
-    (let* ((fs (remove-if-not #'f!symbol-p (remove-duplicates (alexandria:flatten body))))
+    (let* ((fs (remove-if-not #'f!symbol-p (remove-duplicates (flatten body))))
            (ns (mapcar #'f!symbol->symbol fs)))
       `(unwind-protect
          (block ,name
@@ -105,7 +105,7 @@
 
   (defmacro f!let (bindings &body body)
     "Block that fixes the"
-    (let* ((fs (remove-if-not #'f!symbol-p (remove-duplicates (alexandria:flatten body))))
+    (let* ((fs (remove-if-not #'f!symbol-p (remove-duplicates (flatten body))))
            (ns (mapcar #'f!symbol->symbol fs)))
       `(unwind-protect
          (let ,bindings
@@ -118,7 +118,7 @@
 
   (defmacro f!let* (bindings &body body)
     "Block that fixes the"
-    (let* ((fs (remove-if-not #'f!symbol-p (remove-duplicates (alexandria:flatten body))))
+    (let* ((fs (remove-if-not #'f!symbol-p (remove-duplicates (flatten body))))
            (ns (mapcar #'f!symbol->symbol fs)))
       `(unwind-protect
          (let* ,bindings
@@ -131,7 +131,7 @@
 
   (defmacro f!labels (bindings &body body)
     "Block that fixes the"
-    (let* ((fs (remove-if-not #'f!symbol-p (remove-duplicates (alexandria:flatten body))))
+    (let* ((fs (remove-if-not #'f!symbol-p (remove-duplicates (flatten body))))
            (ns (mapcar #'f!symbol->symbol fs)))
       `(unwind-protect
          (labels ,bindings
