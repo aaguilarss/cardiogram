@@ -11,7 +11,7 @@
            :test-around :test-passes-p :test-time-limit
            :test-forms)
   (:export :deftest :*test-output* :tboundp :*test* :*ignore-errors*
-           :symbol-test :ensure-test)
+           :symbol-test :ensure-test :test)
   (:export :*default-format* :simple :binary))
 (in-package :cardiogram/tests)
 
@@ -105,6 +105,7 @@
            (lambda (x)
              (typecase x
                (symbol (test-passes-p (symbol-test x)))
+               (test (test-passess-p x))
                (list (check-dependencies x))))
            (cdr dependency-expr)))
 
@@ -159,7 +160,7 @@
                 (invoke-debugger condition)))))
         (setf t2 (get-internal-run-time))
         (let ((dt (float (/ (- t2 t1) internal-time-units-per-second))))
-          (push (cons (if (test-time-limit test) t (> (test-time-limit test) dt))
+          (push (cons (if (test-time-limit test) (> (test-time-limit test) dt) t)
                       (s! "Test ~a took ~as to run ~%~&" (test-name test) dt))
                 (test-results test)))
         (setf (test-status test)
@@ -222,3 +223,24 @@
                       :before ,(l! (getf options :before))
                       :after ,(l! (getf options :after)))
        :dependency-of ',(ensure-dependency-expr (l! (getf options :dependency-of))))))
+
+
+
+(defmacro test ((&rest options) &body body)
+  (multiple-value-bind (bod decl doc) (parse-body body)
+    (declare (ignore decl))
+    `(let (instance)
+       (setf instance
+             (make-instance 'test
+               :forms (lambda () (declare (special *test*))
+                        ,@bod)
+               :name ',(gensym "TEST")
+               :documentation ,doc
+               :dependencies ',(ensure-dependency-expr (l! (getf options :depends-on)))
+               :time-limit ,(getf options :time-limit)))
+       (resolve-test-combination instance '(:around ,(l! (getf options :around))
+                                            :before ,(l! (getf options :before))
+                                            :after ,(l! (getf options :after))))
+       (resolve-dependency-of instance
+                              ',(ensure-dependency-expr (l! (getf options :dependency-of))))
+       instance)))

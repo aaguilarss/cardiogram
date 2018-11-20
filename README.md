@@ -146,6 +146,31 @@ Furthermore, being functions, tests will return `t` or `nil` whenever they pass 
 
 ```
 
+#### Anonymous Tests
+
+Sometimes you need to test something without being sure about how to test it.
+The `test` macro is a `lambda` form, analog that returns an anonymous test[^1]. Tests defined anonymously
+can be used in combination with other named tests.
+
+```common-lisp
+(test (:after myfunction-test)
+  ...)
+
+(funcall *)
+
+;=> Running test TEST872...
+;
+
+(myfunction-test)
+
+;=> Running test MYFUNCTION-TEST...
+;   Running test TEST872...
+
+
+(deftes myvar-test (:depends-on (test (:after myfunction-test) ...))
+  ...)
+```
+
 #### Errors
 
 A global variable called `*ignore-errors*` controls if a test invokes the debugger on error or not.
@@ -168,6 +193,9 @@ with an error is a failed test.
 ;   Value of 'A in (+ 'A 1) is A, not a NUMBER. 'A(+ 'A 1)NUMBER
 ;   NIL
 ```
+
+
+[^1]: Or rather a test which is't bound to a symbol.
 
 ## Comparisons, valuations and formats.
 
