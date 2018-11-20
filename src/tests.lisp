@@ -158,8 +158,10 @@
                       (test-results test))
                 (invoke-debugger condition)))))
         (setf t2 (get-internal-run-time))
-        (format *test-output* "Test ~a took ~as to run~%~&" (test-name test)
-                (float (/ (- t1 t2) internal-time-units-per-second)))
+        (let ((dt (float (/ (- t2 t1) internal-time-units-per-second))))
+          (push (cons (if (test-time-limit test) t (> (test-time-limit test) dt))
+                      (s! "Test ~a took ~as to run ~%~&" (test-name test) dt))
+                (test-results test)))
         (setf (test-status test)
               (if (compute-test-verdict-using-results (test-results test))
                 :pass :fail))
@@ -173,7 +175,7 @@
                   (member :documentation options))
           (format *test-output* "Documentation:~% ~a ~%" (test-documentation test)))
         :out)
-      (test-passes-p test))))
+      (values (test-passes-p test)))))
 
 
 (defun resolve-dependency-of (test expr)

@@ -58,9 +58,6 @@
               (mapcar it (pop args)))
             (otherwise `(,it))))))
 
-(defun popn (n place)
-  (loop for i from 1 to n collecting
-        (pop place)))
 
 (defun s! (&rest args)
   "Build string PRINCing args. If at any point in the args
@@ -76,6 +73,7 @@
                   (let ((n (count-if
                              (lambda (x) (equal #\~ x))
                              (coerce it 'list))))
-                    (apply #'format (l! s it (popn n args))))
+                    (apply #'format (l! s it (loop for i from 1 to n collecting
+                                                   (pop args)))))
                   (princ it s)))
               (otherwise (princ it s)))))))
