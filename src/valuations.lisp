@@ -59,7 +59,7 @@
     ((vboundp valuation)
      (warn "Redefining valuation ~a in (SETF symbol-valuation)" valuation))
     ((fboundp valuation)
-     (warn "Redefining ~a in (SETF symbol-valuation) previously fbound")))
+     (warn "Redefining ~a in (SETF symbol-valuation) previously fbound" valuation)))
   (setf (symbol-function valuation) new))
 
 (defun add-format-to-valuation (valuation format)
@@ -161,10 +161,12 @@
   `(funcall #'isnt-values% (delay ,form) (delay ,expected)))
 
 
-(define-valuation prints% (form expecetd)
-  (string= (with-output-to-string (*standard-output*)
-             (force form)
-             (force expected))))
+(define-valuation prints% (form expected)
+  (string=
+    (with-output-to-string (*standard-output*)
+      (force form))
+    (with-output-to-string (*standard-output*)
+      (force expected))))
 
 (defmacro prints (form expected)
   `(funcall #'prints% (delay ,form) (delay ,expected)))
@@ -194,74 +196,83 @@
 
 (define-format true simple (args res)
   (destructuring-bind (form &rest rest) args
+    (declare (ignore rest))
     (with-output-to-string (s)
       (format s "~:[FAILED - ~a ~%Expected: ~a ~%Got: ~a~% ~;PASSED - ~a~%~]"
               res 'true t form))))
 
 (define-format false simple (args res)
   (destructuring-bind (form &rest rest) args
+    (declare (ignore rest))
     (with-output-to-string (s)
      (format s "~:[FAILED - ~a ~%Expected: ~a ~%Got: ~a~% ~;PASSED - ~a~%~]"
              res 'true nil form))))
 
 (define-format is simple (args res)
   (destructuring-bind (form expected &rest rest) args
+    (declare (ignore rest))
     (format nil "~:[FAILED - ~a ~%Expected: ~a ~%Got: ~a~% ~;PASSED - ~a~%~]"
             res 'is expected form)))
 
 
 (define-format isnt simple (args res)
   (destructuring-bind (form expected &rest rest) args
+    (declare (ignore rest))
     (with-output-to-string (s)
       (format s "~:[FAILED - ~a ~%Expected: ~a ~%Got: ~a~% ~;PASSED - ~a~%~]"
               res 'isnt expected form))))
 
 (define-format eql-types simple (args res)
   (destructuring-bind (form expected &rest rest) args
+    (declare (ignore rest))
     (with-output-to-string (s)
       (format s "~:[FAILED - ~a ~%Expected: ~a ~%Got: ~a~% ~;PASSED - ~a~%~]"
               res 'eql-types (type-of expected) (type-of form)))))
 
 (define-format eql-types simple (args res)
   (destructuring-bind (form expected &rest rest) args
+    (declare (ignore rest))
     (with-output-to-string (s)
       (format s "~:[FAILED - ~a ~%Expected: ~a ~%Got: ~a~% ~;PASSED - ~a~%~]"
               res 'eql-types (type-of expected) (type-of form)))))
 
 (define-format of-type simple (args res)
   (destructuring-bind (form expected &rest rest) args
+    (declare (ignore rest))
     (with-output-to-string (s)
       (format s "~:[FAILED - ~a ~%Expected: ~a ~%Got: ~a~% ~;PASSED - ~a~%~]"
                   res 'of-type expected (type-of form)))))
 
 (define-format expands-1 simple (args res)
   (destructuring-bind (form expected &rest rest) args
+    (declare (ignore rest))
     (with-output-to-string (s)
       (format s "~:[FAILED - ~a ~%Expected: ~a ~%Got: ~a~% ~;PASSED - ~a~%~]"
               res 'expands-1 expected (macroexpand-1 form)))))
 
 (define-format is-values% simple (args res)
   (destructuring-bind (form expected &rest rest) args
+    (declare (ignore rest))
     (with-output-to-string (s)
       (format s "~:[FAILED - ~a ~%Expected: ~a ~%Got: ~a~% ~;PASSED - ~a~%~]"
               res 'is-values
-              (mutliple-value-list (force expected))
-              (multiple-value-list (expected form))))))
+              (multiple-value-list (force expected))
+              (multiple-value-list (force form))))))
 
 (define-format isnt-values% simple (args res)
   (destructuring-bind (form expected &rest rest) args
+    (declare (ignore rest))
     (with-output-to-string (s)
       (format s "~:[FAILED - ~a ~%Expected: ~a ~%Got: ~a~% ~;PASSED - ~a~%~]"
               res 'isnt-values
-              (mutliple-value-list (force expected))
-              (multiple-value-list (expected form))))))
+              (multiple-value-list (force expected))
+              (multiple-value-list (force form))))))
 
 (define-format prints% simple (args res)
   (destructuring-bind (form expected &rest rest) args
+    (declare (ignore rest))
     (with-output-to-string (s)
       (format s "~:[FAILED - ~a ~%Expected: ~a ~%Got: ~a~% ~;PASSED - ~a~%~]"
               res 'is
-            (with-output-to-string (*standard-output*) (force expected))
-            (with-output-to-string (*standard-output*) (force form))
             (with-output-to-string (*standard-output*) (force expected))
             (with-output-to-string (*standard-output*) (force form))))))
