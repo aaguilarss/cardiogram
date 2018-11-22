@@ -30,7 +30,10 @@
 (define-condition test-failure (error)
   ((name
      :initarg :name
-     :accessor test-failure-test-name)))
+     :accessor test-failure-test-name))
+  (:report (lambda (c s)
+             (format s "Test ~a failed. See *test-output* for report"
+                     (test-failure-test-name c)))))
 
 (define-condition test-dependencies-error (test-failure) ()
   (:report

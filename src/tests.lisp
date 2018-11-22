@@ -77,7 +77,8 @@
   (test-status test))
 
 (defun test-passes-p (test)
-  (case (ensure-test-status test)
+  (case (handler-case (ensure-test-status test)
+          (test-failure (c) (declare (ignore c)) nil))
     (:pass t)
     (:fail nil)))
 
@@ -112,7 +113,7 @@
                  (test (if (test-passes-p x) t
                            (error 'test-dependencies-error :name (test-name x))))
                  (list (check-dependencies x)))
-               ((or test-dependencies-error undefined-test) (c)
+               ((or test-failure test-dependencies-error) (c)
                  (unless *ignore-test-errors*
                    (restart-case (invoke-debugger c)
                      (use-substitute (s)
@@ -126,8 +127,12 @@
                        t))))))
            (cdr dependency-expr)))
 
-(defun compute-test-verdict-using-results (results)
-  (every #'car results))
+(defun compute-test-verdict-using-results (test)
+  (handler-case (assert (every #'car (test-results test)) ()
+                        'test-failure :name (test-name test))
+    (test-failure (c)
+      (unless *ignore-test-errors*
+        (error c)))))
 
 
 
@@ -179,7 +184,7 @@
                       (s! "Test ~a took ~as to run ~%~&" (test-name test) dt))
                 (test-results test)))
         (setf (test-status test)
-              (if (compute-test-verdict-using-results (test-results test))
+              (if (compute-test-verdict-using-results test)
                 :pass :fail))
         (report-test test *default-format*)
         :after
