@@ -3,7 +3,7 @@
 
 (uiop:define-package :cardiogram/toolkit
   (:use :cl)
-  (:export :parse-body :l! :s!))
+  (:export :parse-body :l! :s! :sy! :flatten))
 (in-package :cardiogram/toolkit)
 
 (defun parse-body (body-expr &optional &key (strict t))
@@ -58,6 +58,15 @@
               (mapcar it (pop args)))
             (otherwise `(,it))))))
 
+(defun flatten (list)
+  (labels ((recurse (x acc)
+             (typecase x
+               (null x acc)
+               #+sbcl
+               (sb-impl::comma (recurse (sb-impl::comma-expr x) acc))
+               (atom (cons x acc))
+               (otherwise (recurse (car x) (recurse (cdr x) acc))))))
+    (recurse list nil)))
 
 (defun s! (&rest args)
   "Build string PRINCing args. If at any point in the args
@@ -77,3 +86,6 @@
                                                    (pop args)))))
                   (princ it s)))
               (otherwise (princ it s)))))))
+
+(defun sy! (&rest args)
+  (values (string-upcase (apply #'s! args))))

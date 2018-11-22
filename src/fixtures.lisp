@@ -2,7 +2,7 @@
 ;;; (c) 2018 Abraham Aguilar <a.aguilar@ciencias.unam.mx>
 
 (uiop:define-package :cardiogram/fixtures
-  (:use :cl)
+  (:use :cl :cardiogram/toolkit)
   (:export :defix :with-fixtures
            :f!let :f!labels :f!let* :f!block))
 (in-package :cardiogram/fixtures)

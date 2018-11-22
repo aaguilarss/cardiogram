@@ -3,9 +3,10 @@
 
 (uiop:define-package :cardiogram/tests
   (:mix :closer-mop :cl)
-  (:use :cardiogram/toolkit)
+  (:use :cardiogram/toolkit :cardiogram/conditions)
   (:export :*test* :*test-output*)
   (:export :tboundp :symbol-test :ensure-test :deftest
+           :check-dependencies
            :test-results :test-dependencies :test-name
            :test-status :test-forms :test-after :test-before
            :test-around :test-passes-p :test-time-limit
@@ -20,7 +21,6 @@
 
 (defparameter *test-output* *standard-output*)
 (defparameter *default-format* 'simple)
-(defparameter *ignore-errors* nil)
 
 (defclass test ()
   ((forms
@@ -65,8 +65,8 @@
        (typep (symbol-function symbol) 'test)))
 
 (defun symbol-test (symbol)
-  (and (tboundp symbol)
-       (symbol-function symbol)))
+  (assert (tboundp symbol) () 'undefined-test :name symbol)
+  (symbol-function symbol))
 
 (defun (setf symbol-test) (new symbol)
   (setf (symbol-function symbol) new))
@@ -103,10 +103,25 @@
     (:or (setf test #'some)))
   (funcall test
            (lambda (x)
-             (typecase x
-               (symbol (test-passes-p (symbol-test x)))
-               (test (test-passess-p x))
-               (list (check-dependencies x))))
+             (handler-case
+               (typecase x
+                 (symbol (if (test-passes-p (symbol-test x)) t
+                             (error 'test-dependencies-error :name x)))
+                 (test (if (test-passes-p x) t
+                           (error 'test-dependencies-error :name (test-name x))))
+                 (list (check-dependencies x)))
+               ((or test-dependencies-error undefined-test) (c)
+                 (unless *ignore-test-errors*
+                   (restart-case (invoke-debugger c)
+                     (use-substitute (s)
+                       :report "Use substitute test, symbol or dependency expr"
+                       :interactive (lambda ()
+                                      (format t "Please enter a substitute: ")
+                                      (multiple-value-list (eval (read))))
+                       (check-dependencies (list :and s)))
+                     (continue ()
+                       :report "Continue as if the test passed"
+                       t))))))
            (cdr dependency-expr)))
 
 (defun compute-test-verdict-using-results (results)
@@ -134,13 +149,11 @@
       (prog ((*test* test) (skip (getf options :skip)) t1 t2)
         (declare (special *test*))
         (unless (check-dependencies (test-dependencies test))
-          (go :out))
-        (when (member :info options)
-          (go :info))
+          (push (cons nil (s! "Failed test dependencies"))
+                (test-results test)))
         (dolist (a (test-around test)) (unless (member a skip) (funcall a)))
         (dolist (a (test-before test)) (unless (member a skip) (funcall a)))
-        (format *test-output* "Running test ~a...~%~%" (test-name test))
-        :this
+        (format *test-output* "Running test ~a...~%" (test-name test))
         (setf (test-results test) nil)
         (setf t1 (get-internal-run-time))
         (handler-case (funcall (test-forms test))
@@ -171,10 +184,9 @@
         (dolist (a (test-after test)) (unless (member a skip) (funcall a)))
         :around2
         (dolist (a (test-around test)) (unless (member a skip) (funcall a)))
-        :info
-        (when (or (member :info options)
-                  (member :documentation options))
-          (format *test-output* "Documentation:~% ~a ~%" (test-documentation test)))
+        (when (getf options :documentation)
+          (push (cons t (s! "Documentation: ~% ~a ~%" (test-documentation test)))
+                (test-results test)))
         :out)
       (values (test-passes-p test)))))
 
@@ -234,7 +246,7 @@
              (make-instance 'test
                :forms (lambda () (declare (special *test*))
                         ,@bod)
-               :name ',(gensym "TEST")
+               :name 'anonymous-test
                :documentation ,doc
                :dependencies ',(ensure-dependency-expr (l! (getf options :depends-on)))
                :time-limit ,(getf options :time-limit)))
