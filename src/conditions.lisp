@@ -5,13 +5,12 @@
   (:use :cl)
   (:export :test-failure :test-dependencies-error
            :undefined-test :undefined-test-name
+           :undefined-test-in-combination :combination-test-name
            :*ignore-test-errors* :*ignore-errors*)
   (:export :read-substitute-expr))
 (in-package :cardiogram/conditions)
 
 
-
-(defparameter *test-error* *error-output*)
 (defparameter *ignore-test-errors* nil)
 (defparameter *ignore-errors* nil)
 
@@ -39,19 +38,11 @@
               (test-failure-test-name c))))
   (:documentation "To be signaled when checking dependencies"))
 
-
-(define-condition test-time-limit-exceeded (test-failure) ()
-  (:documentation "To be signaled when checking dependencies"))
-
-
-
-
-;; Regarding the definition of tests
-
-(define-condition unknown-test-in-combination (error) ()
-  (:documentation "To be signaled when resolving a
-                  test's combination"))
-
-(define-condition unknown-test-in-dependency-expr (error) ()
-  (:documentation "To be signaled when checking dependency expr."))
-
+(define-condition undefined-test-in-combination (undefined-test)
+  ((combination-test
+     :initarg :combination-test
+     :accessor combination-test-name))
+  (:report (lambda (c s)
+             (let ((n (undefined-test-name c)))
+               (format s "When resolving the combination for test ~a the test ~a is undefined ~:[~;But ~a is fbound.~]"
+                       (combination-test-name c) n (fboundp n) n)))))
