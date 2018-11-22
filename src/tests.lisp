@@ -194,12 +194,16 @@
 
 
 (defun resolve-dependency-of (test expr)
-  (loop for sy in (cdr expr) do
-        (when (tboundp sy)
+  (handler-case
+    (loop for sy in (cdr expr) do
           (setf (test-dependencies (symbol-test sy))
                 `(,(car expr)
                    ,(test-name test)
-                   ,(test-dependencies (symbol-test sy)))))))
+                   ,(test-dependencies (symbol-test sy)))))
+    (undefined-test (c)
+      (error 'undefined-test-in-dependency-of
+             :name (undefined-test-name c)
+             :dependency-name (test-name test)))))
 
 (defun ensure-test (name initargs &key combination dependency-of)
   (when (tboundp name)

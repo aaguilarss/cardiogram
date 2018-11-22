@@ -5,6 +5,7 @@
   (:use :cl)
   (:export :test-failure :test-dependencies-error
            :undefined-test :undefined-test-name
+           :undefined-test-in-dependency-of :dependency-name
            :undefined-test-in-combination :combination-test-name
            :*ignore-test-errors* :*ignore-errors*)
   (:export :read-substitute-expr))
@@ -46,3 +47,12 @@
              (let ((n (undefined-test-name c)))
                (format s "When resolving the combination for test ~a the test ~a is undefined ~:[~;But ~a is fbound.~]"
                        (combination-test-name c) n (fboundp n) n)))))
+
+(define-condition undefined-test-in-dependency-of (undefined-test)
+  ((dependency-name
+     :initarg :dependency-name
+     :accessor dependency-name))
+  (:report (lambda (c s)
+             (let ((n (undefined-test-name c)))
+               (format s "When adding ~a as a dependency, the test ~a is undefined ~:[~;But ~a is fbound.~]"
+                       (dependency-name c) n (fboundp n) n)))))
