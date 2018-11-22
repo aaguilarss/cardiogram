@@ -113,7 +113,7 @@
                  (test (if (test-passes-p x) t
                            (error 'test-dependencies-error :name (test-name x))))
                  (list (check-dependencies x)))
-               ((or test-failure test-dependencies-error) (c)
+               ((or undefined-test test-dependencies-error) (c)
                  (unless *ignore-test-errors*
                    (restart-case (invoke-debugger c)
                      (use-substitute (s)
@@ -225,9 +225,16 @@
   (case (car expr)
     (:and) (:or) (t (push :and expr)))
   (loop for el in expr collecting
-        (typecase el
-          (atom el)
+        (etypecase el
+          (symbol (if (tboundp el)
+                    el
+                    (progn
+                      (unless (eql el (or :and :or))
+                        (warn "Test ~a is not currently defined." el))
+                      el)))
+          (test el)
           (list (ensure-dependency-expr el)))))
+
 
 
 (defmacro deftest (name (&rest options) &body body)
