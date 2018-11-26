@@ -127,6 +127,7 @@
                        t))))))
            (cdr dependency-expr)))
 
+;; This function needs to be customizable.
 (defun compute-test-verdict-using-results (test)
   (handler-case (assert (every #'car (test-results test)) ()
                         'test-failure :name (test-name test))
@@ -136,7 +137,7 @@
 
 
 
-
+;; This function will also be customizable
 (defgeneric report-test (test format))
 
 (defmethod report-test (test format)
@@ -153,7 +154,7 @@
 (defmethod initialize-instance :after ((test test) &key)
   (set-funcallable-instance-function test
     (lambda (&rest options)
-      (prog ((*test* test) (skip (getf options :skip)) t1 t2)
+      (let ((*test* test) (skip (getf options :skip)) t1 t2)
         (declare (special *test*))
         (unless (check-dependencies (test-dependencies test))
           (push (cons nil (s! "Failed test dependencies"))
@@ -162,23 +163,16 @@
         (dolist (a (test-before test)) (unless (member a skip) (funcall a)))
         (format *test-output* "Running test ~a...~%" (test-name test))
         (setf (test-results test) nil)
-        (setf t1 (get-internal-run-time))
-        (handler-case (funcall (test-forms test))
-          (error (condition)
-            (if *ignore-errors*
-              (push (cons nil
-                          (apply #'s!
-                                 (l! (simple-condition-format-control condition)
-                                     (simple-condition-format-arguments condition))))
-                    (test-results test))
-              (progn
-                (push (cons nil
-                            (apply #'s!
-                                   (l! (simple-condition-format-control condition)
-                                       (simple-condition-format-arguments condition))))
-                      (test-results test))
-                (invoke-debugger condition)))))
-        (setf t2 (get-internal-run-time))
+        (handler-case (progn
+                        (setf t1 (get-internal-real-time))
+                        (funcall (test-forms test))
+                        (setf t2 (get-internal-real-time)))
+          (error (c)
+            (push (cons nil (apply #'s!
+                                   (l! (simple-condition-format-control c))
+                                   (l! (simple-condition-format-arguments c))))
+                  (test-results test))
+            (unless *ignore-errors* (invoke-debugger c))))
         (let ((dt (float (/ (- t2 t1) internal-time-units-per-second))))
           (push (cons (if (test-time-limit test) (> (test-time-limit test) dt) t)
                       (s! "Test ~a took ~as to run ~%~&" (test-name test) dt))
@@ -187,14 +181,11 @@
               (if (compute-test-verdict-using-results test)
                 :pass :fail))
         (report-test test *default-format*)
-        :after
         (dolist (a (test-after test)) (unless (member a skip) (funcall a)))
-        :around2
         (dolist (a (test-around test)) (unless (member a skip) (funcall a)))
         (when (getf options :documentation)
           (push (cons t (s! "Documentation: ~% ~a ~%" (test-documentation test)))
-                (test-results test)))
-        :out)
+                (test-results test))))
       (values (test-passes-p test)))))
 
 
@@ -248,8 +239,7 @@
          :documentation ,doc
          :dependencies ',(ensure-dependency-expr (l! (getf options :depends-on)))
          :time-limit ,(getf options :time-limit))
-       :combination '(
-                      :around ,(l! (getf options :around))
+       :combination '(:around ,(l! (getf options :around))
                       :before ,(l! (getf options :before))
                       :after ,(l! (getf options :after)))
        :dependency-of ',(ensure-dependency-expr (l! (getf options :dependency-of))))))
