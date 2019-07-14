@@ -10,7 +10,7 @@
            :test-results :test-dependencies :test-name
            :test-status :test-forms :test-after :test-before
            :test-around :test-passes-p :test-time-limit
-           :test-forms)
+           :test-forms :test-body :test-options)
   (:export :deftest :*test-output* :tboundp :*test* :*ignore-errors*
            :symbol-test :ensure-test :test)
   (:export :*default-format* :simple :binary))
@@ -26,6 +26,12 @@
   ((forms
      :initarg :forms
      :accessor test-forms)
+   (body
+     :initarg :body
+     :accessor test-body)
+   (options
+     :initarg :options
+     :accessor test-options)
    (name
      :initarg :name
      :accessor test-name)
@@ -59,7 +65,6 @@
      :accessor test-documentation))
   (:metaclass funcallable-standard-class))
 
-
 (defun tboundp (symbol)
   (and (fboundp symbol)
        (typep (symbol-function symbol) 'test)))
@@ -79,8 +84,8 @@
 (defun test-passes-p (test)
   (case (handler-case (ensure-test-status test)
           (test-failure (c) (declare (ignore c)) nil))
-    (:pass t)
-    (:fail nil)))
+    (:passed t)
+    (:failed nil)))
 
 (defun resolve-test-combination (test combination)
   (handler-case
@@ -129,12 +134,10 @@
 
 ;; This function needs to be customizable.
 (defun compute-test-verdict-using-results (test)
-  (handler-case (assert (every #'car (test-results test)) ()
-                        'test-failure :name (test-name test))
-    (test-failure (c)
-      (unless *ignore-test-errors*
-        (error c)))))
-
+  (if (every #'car (test-results test))
+    t
+    (unless *ignore-test-errors*
+      (error 'test-failure :name (test-name test)))))
 
 
 ;; This function will also be customizable
@@ -179,7 +182,7 @@
                 (test-results test)))
         (setf (test-status test)
               (if (compute-test-verdict-using-results test)
-                :pass :fail))
+                :passed :failed))
         (report-test test *default-format*)
         (dolist (a (test-after test)) (unless (member a skip) (funcall a)))
         (dolist (a (test-around test)) (unless (member a skip) (funcall a)))
@@ -233,6 +236,8 @@
     (declare (ignore decl))
     `(ensure-test ',name
        (list
+         :options ',options
+         :body ',body
          :forms (lambda () (declare (special *test*))
                   ,@bod)
          :name ',name
@@ -252,6 +257,8 @@
     `(let (instance)
        (setf instance
              (make-instance 'test
+               :options ',options
+               :body ',body
                :forms (lambda () (declare (special *test*))
                         ,@bod)
                :name 'anonymous-test

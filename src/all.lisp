@@ -6,4 +6,5 @@
   (:use-reexport :cardiogram/fixtures
                  :cardiogram/conditions
                  :cardiogram/tests
-                 :cardiogram/valuations))
+                 :cardiogram/valuations
+                 :cardiogram/introspection))

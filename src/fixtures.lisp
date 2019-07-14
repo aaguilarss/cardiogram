@@ -11,21 +11,18 @@
 
 (defparameter *fixes* (make-hash-table))
 
-(defun fix-bound-p (symbol)
-  (when (gethash symbol *fixes*) t))
-
-(defun fix-definition (symbol)
-  (and (fix-bound-p symbol)
+(defun symbol-fix (symbol)
+  (and (symbolp symbol)
        (gethash symbol *fixes*)))
 
-(defun (setf fix-definition) (new symbol)
+(defun (setf symbol-fix) (new symbol)
   (etypecase new
     (function (setf (gethash symbol *fixes*) new))))
 
 (defmacro defix (name args &body body)
-  `(setf (fix-definition ',name)
-         (lambda ,args
-           ,@body)))
+  `(setf (symbol-fix ',name)
+     (lambda ,args
+       ,@body)))
 
 
 

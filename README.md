@@ -2,7 +2,7 @@
 
 A framework for impromptu testing in Common Lisp.
 
-WARNING: Still in alpha.
+WARNING: Work in progress.
 
 ## Usage
 
@@ -33,9 +33,9 @@ To run a test, call it by name. For example:
 
 ```
 
-This will run the code inside the test, then save the result. The second time you call `(a)` the
+This will run the code inside the test, then save the result. The second time you call `(myfunction-test)` the
 code won't be run, rather the test result will be printed. To run the test again, call it with
-the `:run` option like so:
+the `:run` keyword like so:
 
 ```common-lisp
 (redefine-myfunction)
@@ -123,8 +123,8 @@ Both `:dependency-of` and `:depends-on` accept dependency disjunctions and conju
 of the form:
 
 ```common-lisp
-<dependency-expr> := (<operator-keyw> <symbol> <dependency-expr>)
-<operator-keyw> := :and :or
+<dependency-expr>  := (<operator-keyword> <symbol>* <dependency-expr>*)
+<operator-keyword> := :and :or
 ```
 
 Tests are funcallable, so you can programatically call tests with Lisp's own `funcall`. For example:
@@ -135,7 +135,7 @@ Tests are funcallable, so you can programatically call tests with Lisp's own `fu
         (funcall (symbol-test sy))))
 ```
 
-Furthermore, being functions, tests will return `t` or `nil` whenever they pass or fail respectively.
+Furthermore, tests will return `t` or `nil` whenever they pass or fail respectively.
 
 
 ```common-lisp
@@ -149,7 +149,7 @@ Furthermore, being functions, tests will return `t` or `nil` whenever they pass 
 #### Anonymous Tests
 
 Sometimes you need to test something without being sure about how to test it.
-The `test` macro is a `lambda` form, analog that returns an anonymous test[^1]. Tests defined anonymously
+The `test` macro is a `lambda` form analog that returns an anonymous test[^1]. Tests defined anonymously
 can be used in combination with other named tests.
 
 ```common-lisp
@@ -174,7 +174,7 @@ can be used in combination with other named tests.
 #### Errors
 
 A global variable called `*ignore-errors*` controls if a test invokes the debugger on error or not.
-It's set to `nil` by default. When set to `t`, errors will be ignored but sill be reported. A test
+It's set to `nil` by default. When set to `t`, errors will be ignored but sill reported. A test
 with an error is a failed test.
 
 ```common-lisp
@@ -202,28 +202,40 @@ Cardiogram provides the following valuations to be used inside a test's forms.
 
 ```
 (true form)
+; Tests if form is true
 
 (false form)
+; Tests if form is false
 
 (fail form)
+; Will always fail form
 
 (pass form)
+; Will always pass form
 
 (is form expected)
+; To test if form is eql to expected
 
 (isnt form expected)
+; To test if form isn't eql to expected
 
 (is-values form expected)
+; To test if the values of form are eql to the values of expected
 
 (isnt-values form expected)
+; Tests if  the falues of form aren't eql to de values of expected
 
 (is-print form expected)
+; Tests if form prints the same as expected
 
 (eql-types form1 form2)
+; Tests if form1 and form2 are of eql types
 
 (of-type form expected)
+; Tests if form is of type expected
 
 (expands-1 form expected)
+; Tests if form macroexpand-1s to expected
 ```
 
 You can define new valuations by a two step process. First use the `define-valuation` macro. The body in
@@ -266,7 +278,7 @@ adding your format to each valuation name. Then to use it do `(setf *default-for
 
 ```
 
-Cardiogram outputs report strings to a stream called `*test-output*`, which defaults to `*standard-output*`.
+Cardiogram outputs report strings to a stream called `*test-output*` which defaults to `*standard-output*`.
 You can change it to whatever stream you like.
 
 
@@ -274,7 +286,7 @@ You can change it to whatever stream you like.
 ## Fixes
 
 Sometimes you need to run a test that changes an aspect of the environment. To fix the environment again,
-cardiogram provides a few macros wrapping `unwind-protect`. The main one is `with-fixes`.
+cardiogram has a few macros wrapping `unwind-protect`. The main one is `with-fixes`.
 
 ```common-lisp
 
@@ -300,7 +312,7 @@ var2
 #### Environments with automatic fixes
 
 Also there are macros that automatically compute fixes for symbols whose `symbol-name`
-starts with `F!`. They are `f!let`, `f!let*`, `f!block` and `f!labels`
+starts with `f!`. They are `f!let`, `f!let*`, `f!block` and `f!labels`
 
 ```common-lisp
 *global-var*
@@ -313,7 +325,7 @@ starts with `F!`. They are `f!let`, `f!let*`, `f!block` and `f!labels`
 
 *global-var*
 
-;=> 4
+;=> 4º
 
 ```
 
@@ -323,6 +335,12 @@ You can define your own fixes with the `defix` macro.
 
 ```common-lisp
 ; (defix name args &body body)
+; where args must be a list of 1 element
+
+(defix my-symbol-p (s)
+  (when (my-symbol-p s)
+    (setf s 5))
+
 ```
 
-[^1]: Or rather a test which is't bound to a symbol.
+[^1]: Or rather a test bound to a symbol.
