@@ -170,7 +170,7 @@
                         (setf t1 (get-internal-real-time))
                         (funcall (test-forms test))
                         (setf t2 (get-internal-real-time)))
-          (error (c)
+          (simple-condition (c)
             (push (cons nil (apply #'s!
                                    (l! (simple-condition-format-control c))
                                    (l! (simple-condition-format-arguments c))))
