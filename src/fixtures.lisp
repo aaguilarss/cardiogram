@@ -9,31 +9,38 @@
 
 
 
-(defparameter *fixes* nil) 
+(defparameter *fixes* (make-hash-table))
 
-(defmacro defix (args &body body)
-  `(pushnew (lambda ,args ,@body) *fixes*))
+(defun symbol-fix (symbol)
+  (and (symbolp symbol)
+       (gethash symbol *fixes*)))
+
+(defun (setf symbol-fix) (new symbol)
+  (etypecase new
+    (function (setf (gethash symbol *fixes*) new))))
+
+(defmacro defix (name args &body body)
+  `(setf (symbol-fix ',name)
+     (lambda ,args
+       ,@body)))
 
 
 
 ;;; Built-in fixes
 
-;; Fixes are written to expand intro macros, see how make-fixes works
-;;  to know why. There's no need to name them tho.
-
-(defix (s)
+(defix var (s)
   (when (and (boundp s)
              (not #+:lispworks (sys:symbol-constant-p s)
                   #-:lispworks (constantp s)))
     `(setf (symbol-value ',s) ,(symbol-value s))))
 
-(defix (s)
+(defix macro-function (s)
   (when (and (macro-function s)
              (not #+sbcl (sb-ext:package-locked-p (symbol-package s))
                   #-sbcl (eql (find-package :cl) (symbol-package s))))
     `(setf (macro-function ',s) ,(macro-function s))))
 
-(defix (s)
+(defix function (s)
   (when (and (fboundp s)
              (not (macro-function s))
              (not #+sbcl (sb-ext:package-locked-p (symbol-package s))
@@ -45,17 +52,25 @@
 (defun make-fixes (symbol-list)
   (remove-if #'null
     (loop for s in symbol-list appending
-          (when (and (not (keywordp s))
-                     (symbol-package s))
-            (loop for f in *fixes*
-                  collecting (funcall f s))))))
-              
+          (typecase s
+              (symbol
+                (when (and (not (keywordp s))
+                           (symbol-package s))
+                  (loop for f being each hash-value of *fixes*
+                        collecting (funcall f s))))
+              (list
+                (when (and (not (keywordp (car s)))
+                           (symbol-package (car s)))
+                  (loop for f in (cdr s)
+                        collecting (funcall (symbol-fix f) (car s)))))))))
 
 (defmacro with-fixtures (symbols &body body)
   "Run the forms in BODY and fix the SYMBOLS"
   `(unwind-protect
-     (progn ,@body)
+     (block nil ,@body)
      ,@(make-fixes symbols)))
+
+
 
 
 ;;; Blocks with automatic fixtures
