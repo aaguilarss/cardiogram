@@ -7,4 +7,5 @@
                  :cardiogram/conditions
                  :cardiogram/tests
                  :cardiogram/valuations
-                 :cardiogram/introspection))
+                 :cardiogram/introspection
+                 :cardiogram/annotations))
