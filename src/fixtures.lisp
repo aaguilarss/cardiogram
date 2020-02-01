@@ -2,48 +2,38 @@
 ;;; (c) 2018 Abraham Aguilar <a.aguilar@ciencias.unam.mx>
 
 (uiop:define-package :cardiogram/fixtures
-  (:use :cl)
-  (:export :defix :with-fixtures)
-  (:export :f!let :f!labels :f!let* :f!block))
+  (:use :cl :cardiogram/toolkit)
+  (:export :defix :with-fixtures
+           :f!let :f!labels :f!let* :f!block))
 (in-package :cardiogram/fixtures)
 
 
 
-(defvar +fixes+ (make-hash-table))
+(defparameter *fixes* nil) 
 
-(defun fix-bound-p (symbol)
-  (when (gethash symbol +fixes+) t))
-
-(defun fix-definition (symbol)
-  (and (fix-bound-p symbol)
-       (gethash symbol +fixes+)))
-
-(defun (setf fix-definition) (new symbol)
-  (etypecase new
-    (function (setf (gethash symbol +fixes+) new))))
-
-(defmacro defix (name args &body body)
-  `(setf (fix-definition ',name)
-         (lambda ,args
-           ,@body)))
+(defmacro defix (args &body body)
+  `(pushnew (lambda ,args ,@body) *fixes*))
 
 
 
 ;;; Built-in fixes
 
-(defix var (s)
+;; Fixes are written to expand intro macros, see how make-fixes works
+;;  to know why. There's no need to name them tho.
+
+(defix (s)
   (when (and (boundp s)
              (not #+:lispworks (sys:symbol-constant-p s)
                   #-:lispworks (constantp s)))
     `(setf (symbol-value ',s) ,(symbol-value s))))
 
-(defix macro-function (s)
+(defix (s)
   (when (and (macro-function s)
              (not #+sbcl (sb-ext:package-locked-p (symbol-package s))
                   #-sbcl (eql (find-package :cl) (symbol-package s))))
     `(setf (macro-function ',s) ,(macro-function s))))
 
-(defix fdefinition (s)
+(defix (s)
   (when (and (fboundp s)
              (not (macro-function s))
              (not #+sbcl (sb-ext:package-locked-p (symbol-package s))
@@ -55,25 +45,17 @@
 (defun make-fixes (symbol-list)
   (remove-if #'null
     (loop for s in symbol-list appending
-          (typecase s
-              (symbol
-                (when (and (not (keywordp s))
-                           (symbol-package s))
-                  (loop for f being each hash-value of +fixes+
-                        collecting (funcall f s))))
-              (list
-                (when (and (not (keywordp (car s)))
-                           (symbol-package (car s)))
-                  (loop for f in (cdr s)
-                        collecting (funcall (fix-definition f) (car s)))))))))
+          (when (and (not (keywordp s))
+                     (symbol-package s))
+            (loop for f in *fixes*
+                  collecting (funcall f s))))))
+              
 
 (defmacro with-fixtures (symbols &body body)
   "Run the forms in BODY and fix the SYMBOLS"
   `(unwind-protect
-     (block nil ,@body)
+     (progn ,@body)
      ,@(make-fixes symbols)))
-
-
 
 
 ;;; Blocks with automatic fixtures
@@ -87,12 +69,12 @@
          (f!symbol->symbol (symbol)
                            (and
                              (f!symbol-p symbol)
-                             (alexandria:symbolicate (subseq (symbol-name symbol) 2)))))
+                             (sy! (subseq (symbol-name symbol) 2)))))
 
 
   (defmacro f!block (name &body body)
     "Block that fixes the"
-    (let* ((fs (remove-if-not #'f!symbol-p (remove-duplicates (alexandria:flatten body))))
+    (let* ((fs (remove-if-not #'f!symbol-p (remove-duplicates (flatten body))))
            (ns (mapcar #'f!symbol->symbol fs)))
       `(unwind-protect
          (block ,name
@@ -105,7 +87,7 @@
 
   (defmacro f!let (bindings &body body)
     "Block that fixes the"
-    (let* ((fs (remove-if-not #'f!symbol-p (remove-duplicates (alexandria:flatten body))))
+    (let* ((fs (remove-if-not #'f!symbol-p (remove-duplicates (flatten body))))
            (ns (mapcar #'f!symbol->symbol fs)))
       `(unwind-protect
          (let ,bindings
@@ -118,7 +100,7 @@
 
   (defmacro f!let* (bindings &body body)
     "Block that fixes the"
-    (let* ((fs (remove-if-not #'f!symbol-p (remove-duplicates (alexandria:flatten body))))
+    (let* ((fs (remove-if-not #'f!symbol-p (remove-duplicates (flatten body))))
            (ns (mapcar #'f!symbol->symbol fs)))
       `(unwind-protect
          (let* ,bindings
@@ -131,7 +113,7 @@
 
   (defmacro f!labels (bindings &body body)
     "Block that fixes the"
-    (let* ((fs (remove-if-not #'f!symbol-p (remove-duplicates (alexandria:flatten body))))
+    (let* ((fs (remove-if-not #'f!symbol-p (remove-duplicates (flatten body))))
            (ns (mapcar #'f!symbol->symbol fs)))
       `(unwind-protect
          (labels ,bindings

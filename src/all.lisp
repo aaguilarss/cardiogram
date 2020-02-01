@@ -4,5 +4,8 @@
 (uiop:define-package :cardiogram/all
   (:nicknames :cardiogram :hrt)
   (:use-reexport :cardiogram/fixtures
+                 :cardiogram/conditions
+                 :cardiogram/tests
                  :cardiogram/valuations
-                 :cardiogram/tests))
+                 :cardiogram/introspection
+                 :cardiogram/annotations))
