@@ -4,7 +4,7 @@
 (uiop:define-package :cardiogram/valuations
   (:mix :closer-mop :cl)
   (:use :cardiogram/tests :cardiogram/toolkit)
-  (:export :pass :fail :true :false :is
+  (:export :pass :fail :is-true :is-false :is
            :isnt :eql-types :of-type :expands-1
            :isnt-values :is-values :prints)
   (:export :vboundp :define-valuation :add-format
@@ -120,10 +120,10 @@
 (define-valuation pass (form)
   (declare (ignore form)) t)
 
-(define-valuation true (form)
+(define-valuation is-true (form)
   (when form t))
 
-(define-valuation false (form)
+(define-valuation is-false (form)
   (when (not form) t))
 
 (define-valuation is (form expected &optional (test #'eql))
@@ -194,14 +194,14 @@
 (define-format pass simple ()
   "PASSED - PASS~%Got: ~a~%")
 
-(define-format true simple (args res)
+(define-format is-true simple (args res)
   (destructuring-bind (form &rest rest) args
     (declare (ignore rest))
     (with-output-to-string (s)
       (format s "~:[FAILED - ~a ~%Expected: ~a ~%Got: ~a~% ~;PASSED - ~a~%~]"
               res 'true t form))))
 
-(define-format false simple (args res)
+(define-format is-false simple (args res)
   (destructuring-bind (form &rest rest) args
     (declare (ignore rest))
     (with-output-to-string (s)
