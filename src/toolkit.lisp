@@ -88,4 +88,4 @@
               (otherwise (princ it s)))))))
 
 (defun sy! (&rest args)
-  (values (string-upcase (apply #'s! args))))
+  (values (intern (string-upcase (apply #'s! args)))))
