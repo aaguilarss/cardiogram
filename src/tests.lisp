@@ -144,6 +144,7 @@
 (defgeneric report-test (test format))
 
 (defmethod report-test (test format)
+  (declare (ignorable format))
   (format *test-output* "Test ~a ~a. ~%~%"
           (test-name test)
           (test-status test))

@@ -14,7 +14,7 @@
                          :end1 1
                          :end2 1))))
   (defannotation in (x def)
-    (:arity 2 :inline t)
+    (:arity 2)
     (let* ((pname
              (if (e!symbolp x)
                (intern (subseq (symbol-name x) 2) :keyword) x))
