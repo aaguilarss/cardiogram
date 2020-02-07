@@ -2,7 +2,7 @@
 ;; (c) 2018 - Abraham Aguilar <a.aguilar@ciencias.unam.mx>
 
 (uiop:define-package :cardiogram/annotations
-  (:use :cl :cl-annot)
+  (:use :cl :cl-annot :cardiogram/toolkit)
   (:export :in))
 
 (in-package :cardiogram/annotations)
@@ -23,4 +23,4 @@
        `(progn
           ,(when (e!symbolp x)
              `(export ',fname ,pname))
-          ,(subst fname (cadr def) def)))))
+          ,(l! (car def) fname (cddr def))))))

@@ -137,7 +137,8 @@
   (if (every #'car (test-results test))
     t
     (unless *ignore-test-errors*
-      (error 'test-failure :name (test-name test)))))
+      (error 'test-failure :name (test-name test)
+                           :results (test-results test)))))
 
 
 ;; This function will also be customizable

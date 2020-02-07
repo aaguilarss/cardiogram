@@ -30,10 +30,14 @@
 (define-condition test-failure (error)
   ((name
      :initarg :name
-     :accessor test-failure-test-name))
+     :accessor test-failure-test-name)
+   (results
+     :initarg :results
+     :accessor test-failure-test-results))
   (:report (lambda (c s)
-             (format s "Test ~a failed. See *test-output* for report"
-                     (test-failure-test-name c)))))
+             (format s "Test ~a failed with the following results:~2&~{~a~&~}"
+                     (test-failure-test-name c)
+                     (reverse (mapcar #'cdr (test-failure-test-results c)))))))
 
 (define-condition test-dependencies-error (test-failure) ()
   (:report
