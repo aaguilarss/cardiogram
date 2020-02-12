@@ -3,7 +3,7 @@
 
 (uiop:define-package :cardiogram/toolkit
   (:use :cl)
-  (:export :parse-body :l! :s! :sy! :flatten))
+  (:export :parse-body :l! :s! :k! :sy! :flatten))
 (in-package :cardiogram/toolkit)
 
 (defun parse-body (body-expr &optional &key (strict t))
@@ -89,3 +89,8 @@
 
 (defun sy! (&rest args)
   (values (intern (string-upcase (apply #'s! args)))))
+
+(defun k! (&rest args)
+  (values
+    (intern (string-upcase (apply #'s! args))
+            :keyword)))

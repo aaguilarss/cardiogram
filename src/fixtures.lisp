@@ -2,7 +2,8 @@
 ;;; (c) 2018 Abraham Aguilar <a.aguilar@ciencias.unam.mx>
 
 (uiop:define-package :cardiogram/fixtures
-  (:use :cl :cardiogram/toolkit)
+  (:nicknames :cardiofix)
+  (:mix :closer-mop :cl :cardiogram/toolkit)
   (:export :defix :with-fixtures
            :f!let :f!labels :f!let* :f!block))
 (in-package :cardiogram/fixtures)
@@ -11,30 +12,40 @@
 
 (defparameter *fixes* (make-hash-table))
 
+(defclass fix ()
+  ((auto
+     :initarg :auto
+     :accessor fix-autop))
+  (:metaclass funcallable-standard-class))
+
 (defun symbol-fix (symbol)
   (and (symbolp symbol)
-       (gethash symbol *fixes*)))
+       (gethash (k! symbol) *fixes*)))
 
 (defun (setf symbol-fix) (new symbol)
   (etypecase new
-    (function (setf (gethash symbol *fixes*) new))))
+    (function (setf (gethash (k! symbol) *fixes*) new))))
 
-(defmacro defix (name args &body body)
-  `(setf (symbol-fix ',name)
-     (lambda ,args
-       ,@body)))
+(defmacro defix (name (s &optional &key (auto t)) &body body)
+  `(let ((insta))
+     (setf insta
+           (make-instance 'fix :auto ,auto))
+     (set-funcallable-instance-function insta
+       (lambda (,s)
+          ,@body))
+     (setf (symbol-fix ',name) insta)))
 
 
 
 ;;; Built-in fixes
 
-(defix var (s)
+(defix value (s)
   (when (and (boundp s)
              (not #+:lispworks (sys:symbol-constant-p s)
                   #-:lispworks (constantp s)))
     `(setf (symbol-value ',s) ,(symbol-value s))))
 
-(defix macro-function (s)
+(defix macro (s)
   (when (and (macro-function s)
              (not #+sbcl (sb-ext:package-locked-p (symbol-package s))
                   #-sbcl (eql (find-package :cl) (symbol-package s))))
@@ -48,21 +59,53 @@
     `(setf (fdefinition ',s) ,(fdefinition s))))
 
 
-
+(defun specified-fixes (spec)
+  (case (car spec)
+    (:only
+      (loop for s in (cdr spec) collecting
+            (symbol-fix s)))
+    (:all
+      (loop for f being each hash-value of *fixes* collecting f))
+    (:all-but
+      (loop for f being each hash-key of *fixes* collecting
+            (unless (member f spec)
+              (symbol-fix f)) into fx
+            finally
+            (return (remove-if #'null fx))))
+    (:and
+      (loop for f being each hash-value of *fixes* collecting
+            (when (fix-autop f) f) into fx
+            finally
+            (return (remove-if #'null
+                               (remove-duplicates
+                                 (append fx
+                                   (loop for s in (cdr spec)
+                                         collecting
+                                         (symbol-fix s)))))))))) 
+            
 (defun make-fixes (symbol-list)
-  (remove-if #'null
-    (loop for s in symbol-list appending
-          (typecase s
-              (symbol
-                (when (and (not (keywordp s))
-                           (symbol-package s))
-                  (loop for f being each hash-value of *fixes*
-                        collecting (funcall f s))))
-              (list
-                (when (and (not (keywordp (car s)))
-                           (symbol-package (car s)))
-                  (loop for f in (cdr s)
-                        collecting (funcall (symbol-fix f) (car s)))))))))
+  (loop for s in symbol-list appending
+        (typecase s
+          (symbol
+            (when (and (not (keywordp s))
+                       (symbol-package s))
+              (loop for f being each hash-value of *fixes*
+                    collecting
+                    (when (fix-autop f)
+                      (funcall f s))
+                    into exps
+                    finally
+                    (return (remove-if #'null exps)))))
+          (list
+            (when (and (not (keywordp (car s)))
+                       (symbol-package (car s)))
+              (loop for f in (specified-fixes (cdr s))
+                    collecting
+                    (funcall f (car s))))))
+        into fixes
+        finally (return (remove-if #'null fixes))))
+
+
 
 (defmacro with-fixtures (symbols &body body)
   "Run the forms in BODY and fix the SYMBOLS"
