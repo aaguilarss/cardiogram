@@ -4,7 +4,7 @@
 (uiop:define-package :cardiogram/fixtures
   (:nicknames :cardiofix)
   (:mix :closer-mop :cl :cardiogram/toolkit)
-  (:export :defix :with-fixtures
+  (:export :defix :with-fixes :fix-autop :symbol-fix
            :f!let :f!labels :f!let* :f!block))
 (in-package :cardiogram/fixtures)
 
@@ -58,6 +58,10 @@
                   #-sbcl (eql (find-package :cl) (symbol-package s))))
     `(setf (fdefinition ',s) ,(fdefinition s))))
 
+(defix unintern (c :auto nil)
+  (when (find-symbol (symbol-name c) *package*)
+    `(unintern ,c *package*)))
+
 
 (defun specified-fixes (spec)
   (case (car spec)
@@ -107,7 +111,7 @@
 
 
 
-(defmacro with-fixtures (symbols &body body)
+(defmacro with-fixes (symbols &body body)
   "Run the forms in BODY and fix the SYMBOLS"
   `(unwind-protect
      (block nil ,@body)
