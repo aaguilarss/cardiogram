@@ -10,6 +10,13 @@
   :description "Simple test framework"
   :long-description #.(uiop:read-file-string
                         (uiop:subpathname *load-pathname* "README.md"))
+  :in-order-to ((test-op (test-op "cardiogram/test-system")))
   :class :package-inferred-system
   :pathname "src"
   :depends-on (:cardiogram/all))
+
+(asdf:defsystem :cardiogram/test-system 
+  :depends-on (:cardiogram)
+  :pathname "tests"
+  :components ((:file "fixtures"))
+  :perform (test-op (o c) (uiop:symbol-call :cl 'print 4) ))
