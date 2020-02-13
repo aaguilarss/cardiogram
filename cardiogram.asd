@@ -16,7 +16,7 @@
   :depends-on (:cardiogram/all))
 
 (asdf:defsystem :cardiogram/test-system 
-  :depends-on (:cardiogram/all)
+  :depends-on (:cardiogram)
   :pathname "tests"
   :components ((:file "fixtures"))
   :perform (test-op (o c) (uiop:symbol-call :cl 'print 4) ))
