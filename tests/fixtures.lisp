@@ -1,8 +1,6 @@
-;; This file is part of Caridiogram
-;; Blah
+;; This file is part of cardiogram
+;; (c) 2020 - Abraham Aguilar <a.aguilar@ciencias.unam.mx>
 
-(uiop:define-package :lingo
-  (:use :cl))
-(in-package :lingo)
+;; Tests for Fixtures 
 
-(defun lingo (x) (1+ x))
+(in-package :cardiogram/test-system)
