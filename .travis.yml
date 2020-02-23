@@ -1,5 +1,4 @@
-language: common-lisp
-
+language: lisp
 sudo: required
 
 env:
