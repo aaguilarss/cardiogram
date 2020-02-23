@@ -1,1 +1,14 @@
 language: common-lisp
+
+sudo: required
+
+env:
+  matrix:
+    - LISP=sbcl
+    - LISP=ccl
+
+install:
+  - curl https://raw.githubusercontent.com/luismbo/cl-travis/master/install.sh | bash
+
+script:
+  - cl -e '(ql-dist:install-dist "http://dist.ultralisp.org" :prompt nil)
